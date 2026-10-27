@@ -1,4 +1,4 @@
-name: Build, test, and deploy to Render
+name: Build and test Render application
 
 "on":
   push:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build-and-test:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -35,13 +35,3 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-      - name: Trigger Render deployment
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "::error::Add RENDER_DEPLOY_HOOK_URL to the repository Actions secrets."
-            exit 1
-          fi
-          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
