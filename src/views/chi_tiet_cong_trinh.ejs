@@ -1,0 +1,310 @@
+<%
+const fieldLabels = {
+  id: 'Mã',
+  cong_trinh_id: 'Mã công trình',
+  ten_cong_trinh: 'Tên công trình',
+  dia_diem: 'Địa điểm',
+  hang_muc: 'Hạng mục',
+  ghi_chu: 'Ghi chú',
+  ngay_tao: 'Ngày tạo',
+  ngay_cap_nhat: 'Ngày cập nhật',
+  ten_mat_bang: 'Tên mặt bằng',
+  loai_mat_bang: 'Loại mặt bằng',
+  cap_mat_bang: 'Cấp mặt bằng',
+  mat_bang_cap_1_id: 'Mã mặt bằng cấp 1',
+  mat_bang_cha_id: 'Mã mặt bằng cấp cha',
+  ranh_gioi: 'Ranh giới',
+  ma_he_toa_do_nguon: 'Hệ tọa độ nguồn',
+  trang_thai: 'Trạng thái',
+  ma_ho_khoan: 'Mã hố khoan',
+  x_vn2000: 'Tọa độ X (VN-2000)',
+  y_vn2000: 'Tọa độ Y (VN-2000)',
+  latitude: 'Vĩ độ',
+  longitude: 'Kinh độ',
+  mat_bang_cap_1: 'Thuộc mặt bằng cấp 1',
+  ten_lop: 'Tên lớp đất',
+  mo_ta: 'Mô tả',
+  ho_khoan_id: 'Mã hố khoan',
+  lop_dat_id: 'Mã lớp đất',
+  mau_id: 'Mã mẫu',
+  stt: 'Số thứ tự',
+  so_hieu_mau: 'Số hiệu mẫu',
+  do_sau_tu: 'Độ sâu từ (m)',
+  do_sau_den: 'Độ sâu đến (m)',
+  so_thi_nghiem: 'Số thí nghiệm',
+  ten_file: 'Tên tệp',
+  ten_luu_tru: 'Tên lưu trữ',
+  loai_tai_lieu: 'Loại tài liệu',
+  duong_dan: 'Đường dẫn',
+  kich_thuoc: 'Dung lượng',
+  mime_type: 'Định dạng tệp',
+  ngay_tai_len: 'Ngày tải lên',
+};
+
+function formatDetailValue(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (value instanceof Date) {
+    return new Intl.DateTimeFormat('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(value);
+  }
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return String(value);
+}
+
+const hiddenColumns = new Set(['id', 'cong_trinh_id']);
+const projectInfoSection = detailSections.find((section) => section.title === 'Thông tin công trình');
+const projectInfoRows = projectInfoSection?.rows ?? [];
+const projectInfoColumns = (projectInfoSection?.columns ?? [])
+  .filter((column) => !hiddenColumns.has(column));
+const surveySections = detailSections.filter((section) =>
+  /^Mặt bằng cấp [1-4]$/.test(section.title),
+);
+const surveyTables = surveySections.map((section) => {
+  const rows = section.rows ?? [];
+  return {
+    title: section.title,
+    rows,
+    columns: [...new Set([
+      ...section.columns,
+      ...rows.flatMap((row) => Object.keys(row)),
+    ])].filter((column) => !hiddenColumns.has(column)),
+  };
+});
+%>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chi tiết công trình - <%= project.ten_cong_trinh ?? `Công trình ${project.id}` %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .page-heading h1 { margin: 0; color: #203b34; font-size: clamp(24px, 3vw, 32px); font-weight: 700; }
+    .back-link { display: inline-block; margin-bottom: 12px; color: #53736a; text-decoration: none; }
+    .back-link:hover { color: #08745e; }
+    .detail-section { margin-bottom: 22px; padding: 20px; border: 1px solid #dce5e1; border-radius: 14px; background: white; box-shadow: 0 4px 14px #19332e08; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .detail-section h2 { display: flex; align-items: baseline; gap: 8px; margin: 0; color: #25443b; font-size: 18px; font-weight: 700; }
+    .section-count { color: #7b8e87; font-size: 13px; font-weight: 500; }
+    .table-wrap { overflow: auto; border: 1px solid #e1e9e5; border-radius: 8px; }
+    .table { min-width: 100%; margin: 0; }
+    .table th { background: #edf3f0; color: #334b43; font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .table td { max-width: 360px; color: #34443e; font-size: 13px; vertical-align: middle; }
+    .value-text { display: block; max-width: 360px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .project-info-table th, .project-info-table td { height: 34px; padding: 5px 8px; }
+    .project-info-table td { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .excel-table { width: max-content; min-width: 100%; table-layout: fixed; }
+    .excel-table th, .excel-table td {
+      width: 108px;
+      max-width: 108px;
+      height: 30px;
+      padding: 4px 6px;
+      font-size: 11px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .excel-table th { white-space: normal; }
+    .excel-table th:last-child, .excel-table td:last-child { width: 260px; max-width: 260px; }
+    .structured-value summary { color: #16765f; cursor: pointer; font-weight: 600; }
+    .structured-value pre { max-width: min(700px, 75vw); max-height: 260px; overflow: auto; margin: 8px 0 0; padding: 12px; border: 1px solid #e1e9e5; border-radius: 7px; background: #f7faf8; color: #34443e; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .empty { margin: 0; color: #75877f; }
+    @media (max-width: 600px) {
+      main { padding: 20px 12px 32px; }
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      .detail-section { padding: 14px; }
+      .section-heading { align-items: flex-start; flex-direction: column; }
+      .table td { max-width: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <header class="page-heading">
+      <div>
+        <a class="back-link" href="/cong-trinh/danh-sach">← Danh sách công trình</a>
+        <h1><%= project.ten_cong_trinh ?? `Công trình ${project.id}` %></h1>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-success" href="/cong-trinh/<%= project.id %>/xuat-file">Xuất file</a>
+        <a class="btn btn-outline-secondary" href="/cong-trinh/<%= project.id %>/lich-su-sua">Lịch sử sửa</a>
+        <a class="btn btn-primary" href="/cong-trinh/<%= project.id %>/sua">Sửa công trình</a>
+      </div>
+    </header>
+
+    <% if (levelAreaRequestSubmitted) { %>
+      <div class="alert alert-info" role="status">
+        Yêu cầu thêm mặt bằng đã được gửi duyệt. Mặt bằng sẽ xuất hiện trong danh sách chính thức sau khi quản trị viên duyệt.
+      </div>
+    <% } %>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Thông tin công trình <span class="section-count">(<%= projectInfoRows.length %> bản ghi)</span></h2>
+        <a class="btn btn-sm btn-outline-success" href="/cong-trinh/<%= project.id %>/xuat-bang/thong-tin-cong-trinh">Xuất Excel bảng này</a>
+      </div>
+      <% if (projectInfoRows.length === 0) { %>
+        <p class="empty">Chưa có thông tin công trình.</p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table class="table table-sm table-striped table-bordered align-middle project-info-table">
+            <thead>
+              <tr>
+                <% projectInfoColumns.forEach((column) => { %>
+                  <th scope="col"><%= fieldLabels[column] ?? column.replaceAll('_', ' ') %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% projectInfoRows.forEach((row) => { %>
+                <tr>
+                  <% projectInfoColumns.forEach((column) => { %>
+                    <% const value = row[column]; const formattedValue = formatDetailValue(value); %>
+                    <td title="<%= formattedValue %>"><%= formattedValue %></td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+    <% surveyTables.forEach((surveyTable) => { %>
+      <section class="detail-section">
+        <% const surveyLevel = Number(surveyTable.title.replace('Mặt bằng cấp ', '')); %>
+        <div class="section-heading">
+          <h2><%= surveyTable.title %> <span class="section-count">(<%= surveyTable.rows.length %> bản ghi)</span></h2>
+          <% if (surveyLevel >= 1 && surveyLevel <= 4) { %>
+            <a class="btn btn-sm btn-outline-success" href="/cong-trinh/<%= project.id %>/xuat-bang/mat-bang-cap-<%= surveyLevel %>">Xuất Excel bảng này</a>
+          <% } %>
+        </div>
+        <% if (surveyLevel >= 2 && surveyLevel <= 4) { %>
+          <% const parentAreas = surveyLevel === 2 ? levelOneAreas : surveyLevel === 3 ? levelTwoAreas : levelThreeAreas; %>
+          <p class="text-secondary small">Mặt bằng cấp <%= surveyLevel %> được liên kết theo mã mặt bằng cấp <%= surveyLevel - 1 %> đã chọn.</p>
+          <% if (parentAreas.length > 0) { %>
+            <details class="mb-3">
+              <summary class="btn btn-outline-primary btn-sm">+ Thêm mặt bằng cấp <%= surveyLevel %></summary>
+              <form class="mt-3 p-3 border rounded bg-light" method="post" action="/cong-trinh/<%= project.id %>/mat-bang-cap/<%= surveyLevel %>">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" for="level-<%= surveyLevel %>-parent">Mã mặt bằng cấp <%= surveyLevel - 1 %></label>
+                    <select class="form-select" id="level-<%= surveyLevel %>-parent" name="mat_bang_cha_id" required>
+                      <option value="">Chọn mặt bằng cấp <%= surveyLevel - 1 %></option>
+                      <% parentAreas.forEach((area) => { %>
+                        <option value="<%= area.id %>">Mã <%= area.id %> · <%= area.ten_mat_bang %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="level-<%= surveyLevel %>-name">Tên mặt bằng cấp <%= surveyLevel %></label>
+                    <input class="form-control" id="level-<%= surveyLevel %>-name" name="ten_mat_bang" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="level-<%= surveyLevel %>-type">Loại mặt bằng</label>
+                    <input class="form-control" id="level-<%= surveyLevel %>-type" name="loai_mat_bang" value="Polygon" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="level-<%= surveyLevel %>-crs">Mã hệ tọa độ nguồn</label>
+                    <select class="form-select" id="level-<%= surveyLevel %>-crs" name="ma_he_toa_do_nguon" required>
+                      <option value="WGS84">WGS84</option>
+                      <option value="VN-2000 TM-3 (kinh tuyến trục 104°45′)">VN-2000 TM-3 (kinh tuyến trục 104°45′)</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="level-<%= surveyLevel %>-boundary">Tọa độ ranh giới</label>
+                    <textarea class="form-control font-monospace" id="level-<%= surveyLevel %>-boundary" name="ranh_gioi" rows="5" placeholder="105 18; 105.1 18; 105.1 18.1" required></textarea>
+                    <div class="form-text">Nhập ít nhất 3 cặp kinh độ/vĩ độ WGS84 hoặc X/Y VN-2000 TM-3, phân cách bằng dấu chấm phẩy; có thể dán GeoJSON Polygon/MultiPolygon. Ranh giới phải giao với mặt bằng cấp <%= surveyLevel - 1 %> đã chọn. Yêu cầu sẽ chờ duyệt.</div>
+                  </div>
+                  <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Gửi duyệt mặt bằng cấp <%= surveyLevel %></button>
+                  </div>
+                </div>
+              </form>
+            </details>
+          <% } else { %>
+            <p class="text-secondary small">Cần có mặt bằng cấp <%= surveyLevel - 1 %> trước khi thêm mặt bằng cấp <%= surveyLevel %>.</p>
+          <% } %>
+        <% } %>
+        <% if (surveyTable.rows.length === 0) { %>
+          <p class="empty">Chưa có dữ liệu.</p>
+        <% } else { %>
+        <div class="table-wrap">
+          <table class="table table-sm table-striped table-bordered align-middle">
+            <thead>
+              <tr>
+                <th scope="col">STT</th>
+                <% surveyTable.columns.forEach((column) => { %>
+                  <th scope="col"><%= fieldLabels[column] ?? column.replaceAll('_', ' ') %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% surveyTable.rows.forEach((row, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <% surveyTable.columns.forEach((column) => { %>
+                    <% const value = row[column]; const formattedValue = formatDetailValue(value); %>
+                    <td>
+                      <% if (typeof value === 'object' && value !== null && !(value instanceof Date)) { %>
+                        <details class="structured-value">
+                          <summary>Xem chi tiết dữ liệu</summary>
+                          <pre><%= formattedValue %></pre>
+                        </details>
+                      <% } else { %>
+                        <span class="value-text" title="<%= formattedValue %>"><%= formattedValue %></span>
+                      <% } %>
+                    </td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <% } %>
+      </section>
+    <% }) %>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Bảng hố khoan theo mẫu Excel <span class="section-count">(<%= excelRows.length %> bản ghi)</span></h2>
+        <a class="btn btn-sm btn-outline-success" href="/cong-trinh/<%= project.id %>/xuat-bang/bang-ho-khoan">Xuất Excel bảng này</a>
+      </div>
+      <p class="text-secondary small">Các cột theo đúng thứ tự dữ liệu được nhập từ file Excel. Kéo ngang để xem đầy đủ.</p>
+      <% if (excelRows.length === 0) { %>
+        <p class="empty">Chưa có dữ liệu hố khoan được nhập từ Excel.</p>
+      <% } else { %>
+        <div class="table-wrap">
+          <table class="table table-sm table-striped table-bordered align-middle excel-table">
+            <thead>
+              <tr>
+                <% excelColumns.forEach((column) => { %>
+                  <th scope="col"><%= column %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% excelRows.forEach((row) => { %>
+                <tr>
+                  <% row.forEach((value) => { %>
+                    <td title="<%= formatDetailValue(value) %>"><%= formatDetailValue(value) %></td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

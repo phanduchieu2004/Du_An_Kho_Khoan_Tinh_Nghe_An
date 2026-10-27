@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .table-frame { overflow: auto; border: 1px solid #dce5e1; background: #fff; }
+    table { margin: 0 !important; white-space: nowrap; }
+    thead th { background: #e9f0ed !important; color: #344b44; }
+    td { vertical-align: middle; }
+    .empty { padding: 32px !important; text-align: center; color: #667772; }
+    @media (max-width: 700px) { main { padding: 22px 12px 36px; } .page-heading { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <% if (createdPendingApproval) { %>
+      <div class="alert alert-success" role="status">
+        Tạo công trình thành công. Công trình đang chờ Quản trị viên duyệt.
+      </div>
+    <% } %>
+    <div class="page-heading">
+      <div>
+        <h1 class="h3 mb-1"><%= title %></h1>
+        <p class="text-secondary mb-0">Danh sách công trình do tài khoản của bạn tạo và trạng thái duyệt.</p>
+      </div>
+      <a class="btn btn-success" href="/cong-trinh/them">+ Tạo công trình</a>
+    </div>
+    <div class="table-frame">
+      <table class="table table-hover table-striped table-bordered align-middle">
+        <thead>
+          <tr><th>Mã</th><th>Tên công trình</th><th>Địa điểm</th><th>Hạng mục</th><th>Ngày tạo</th><th>Trạng thái duyệt</th></tr>
+        </thead>
+        <tbody>
+          <% if (projects.length === 0) { %>
+            <tr><td class="empty" colspan="6">Bạn chưa tạo công trình nào.</td></tr>
+          <% } else { %>
+            <% projects.forEach((project) => { %>
+              <tr>
+                <td><%= project.id %></td>
+                <td><%= project.ten_cong_trinh || `Công trình ${project.id}` %></td>
+                <td><%= project.dia_diem || '—' %></td>
+                <td><%= project.hang_muc || '—' %></td>
+                <td><%= project.ngay_tao ? new Date(project.ngay_tao).toLocaleString('vi-VN') : '—' %></td>
+                <td>
+                  <% if (project.da_duyet) { %>
+                    <span class="badge text-bg-success">Đã duyệt</span>
+                  <% } else { %>
+                    <span class="badge text-bg-warning">Chờ duyệt</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

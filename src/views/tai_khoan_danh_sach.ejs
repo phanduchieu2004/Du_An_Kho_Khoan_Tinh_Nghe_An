@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    .account-tools { min-height: 56px; padding: 8px 30px; display: flex; align-items: center; gap: 10px; background: #e5efeb; border-bottom: 1px solid #cbdad4; }
+    .account-tool-menu { position: relative; }
+    .account-tool-menu summary { padding: 9px 16px; border: 1px solid #c5d6cf; border-radius: 7px; background: #fff; color: #24483e; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; list-style: none; }
+    .account-tool-menu summary::-webkit-details-marker { display: none; }
+    .account-tool-menu summary:hover, .account-tool-menu[open] summary { border-color: #17785f; background: #f3faf7; color: #12624d; }
+    .account-tool-link { padding: 9px 16px; border: 1px solid #c5d6cf; border-radius: 7px; background: #fff; color: #24483e; font-size: 14px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+    .account-tool-link:hover, .account-tool-link:focus-visible { border-color: #17785f; background: #f3faf7; color: #12624d; }
+    .role-menu { position: absolute; z-index: 20; top: calc(100% + 7px); left: 0; min-width: 240px; padding: 6px; border: 1px solid #dce5e1; border-radius: 9px; background: #fff; box-shadow: 0 10px 25px #19332e1c; }
+    .role-menu a { display: block; padding: 10px 12px; border-radius: 6px; color: #344b44; text-decoration: none; white-space: nowrap; }
+    .role-menu a:hover, .role-menu a[aria-current="page"] { background: #edf6f2; color: #08745e; }
+    main { width: min(1440px, calc(100% - 48px)); margin: 28px auto; padding: 26px; background: #fff; border: 1px solid #dce5e1; border-radius: 12px; }
+    .page-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 24px; }
+    .page-heading h1 { margin: 0 0 4px; color: #1f302d; font-size: 28px; }
+    .page-heading p { margin: 0; }
+    .table { margin-bottom: 0; }
+    .table thead th { background: #e9f0ed; color: #344b44; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    .actions form { margin: 0; }
+    .role-badge { margin: 2px; }
+    .table-wrap { overflow-x: auto; }
+    @media (max-width: 900px) {
+      .account-tools { padding: 8px 18px; overflow-x: auto; }
+    }
+    @media (max-width: 650px) {
+      main { width: calc(100% - 24px); padding: 18px; margin: 18px auto; }
+      .page-heading h1 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <nav class="account-tools" aria-label="Chức năng quản lý người dùng">
+    <details class="account-tool-menu">
+      <summary>Phân quyền ▾</summary>
+      <div class="role-menu">
+        <% roles.forEach((role) => { %>
+          <a href="/nguoi-dung/quyen/<%= role.slug %>" <%= selectedRole === role.slug ? 'aria-current="page"' : '' %>>Quản lý tài khoản <%= role.title %></a>
+        <% }); %>
+      </div>
+    </details>
+    <button type="button">Phân nhiệm vụ</button>
+    <a class="account-tool-link" href="/nguoi-dung/uy-quyen">Ủy quyền</a>
+    <button type="button">Phân vai trò</button>
+  </nav>
+  <main>
+    <div class="page-heading">
+      <div>
+        <h1><%= title %></h1>
+        <p class="text-secondary">Xem tài khoản, quản lý mật khẩu và cấp quyền vào từng cổng.</p>
+      </div>
+      <a class="btn btn-success" href="/nguoi-dung/them?role=<%= selectedRole %>">+ Thêm tài khoản</a>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-hover table-bordered align-middle">
+        <thead class="table-light">
+          <tr><th>Mã</th><th>Tài khoản</th><th>Liên hệ</th><th>Chuyên môn / đơn vị</th><th>Trạng thái hồ sơ</th><th>Cổng được cấp</th><th>Quyền đăng nhập</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          <% if (accounts.length === 0) { %>
+            <tr><td class="text-center text-secondary py-4" colspan="8">Chưa có tài khoản.</td></tr>
+          <% } else { %>
+            <% accounts.forEach((account) => { %>
+              <tr>
+                <td><%= account.ma_nguoi_dung %></td>
+                <td><a class="fw-semibold text-decoration-none" href="/nguoi-dung/<%= account.ma_nguoi_dung %>/chi-tiet?role=<%= selectedRole %>"><%= account.ho_ten || account.ten_dang_nhap %></a><br /><span class="text-secondary small">@<%= account.ten_dang_nhap %></span></td>
+                <td><%= account.email || '—' %><br /><span class="text-secondary small"><%= account.so_dien_thoai || 'Chưa có số điện thoại' %></span></td>
+                <td>
+                  <% if (account.ma_ky_su || account.chuyen_nganh || account.don_vi_cong_tac) { %>
+                    <% if (account.ma_ky_su) { %><strong><%= account.ma_ky_su %></strong><br /><% } %>
+                    <%= [account.chuyen_nganh, account.don_vi_cong_tac].filter(Boolean).join(' · ') || '—' %>
+                  <% } else { %>—<% } %>
+                </td>
+                <td>
+                  <% const statusLabel = account.trang_thai === 'DA_DUYET' ? 'Đã duyệt' : account.trang_thai === 'TU_CHOI' ? 'Từ chối' : 'Chờ duyệt'; %>
+                  <span class="badge <%= account.trang_thai === 'DA_DUYET' ? 'text-bg-success' : account.trang_thai === 'TU_CHOI' ? 'text-bg-danger' : 'text-bg-warning' %>"><%= statusLabel %></span>
+                </td>
+                <td>
+                  <% account.cong_vai_tro.forEach((slug) => { const role = roles.find((item) => item.slug === slug); if (role) { %>
+                    <span class="badge text-bg-success role-badge"><%= role.title %></span>
+                  <% } }); %>
+                </td>
+                <td>
+                  <% if (account.duoc_dang_nhap) { %>
+                    <span class="badge text-bg-success">Được đăng nhập</span>
+                  <% } else { %>
+                    <span class="badge text-bg-secondary">Đã khóa</span>
+                  <% } %>
+                </td>
+                <td>
+                  <div class="actions">
+                    <a class="btn btn-sm btn-outline-primary" href="/nguoi-dung/<%= account.ma_nguoi_dung %>/chi-tiet?role=<%= selectedRole %>">Chi tiết</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="/nguoi-dung/<%= account.ma_nguoi_dung %>?role=<%= selectedRole %>">Sửa</a>
+                    <% if (account.trang_thai === 'DA_DUYET') { %>
+                      <span class="badge text-bg-success">Đã duyệt</span>
+                    <% } else { %>
+                      <form method="post" action="/nguoi-dung/<%= account.ma_nguoi_dung %>/duyet" onsubmit="return confirm('Duyệt tài khoản <%= account.ten_dang_nhap %>?');">
+                        <input type="hidden" name="nguoi_dung_role_scope" value="<%= selectedRole %>" />
+                        <button class="btn btn-sm btn-outline-success" type="submit"><%= account.trang_thai === 'TU_CHOI' ? 'Duyệt lại' : 'Duyệt' %></button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

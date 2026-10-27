@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { width: min(1100px, calc(100% - 48px)); margin: 28px auto; padding: 26px; background: #fff; border: 1px solid #dce5e1; border-radius: 12px; }
+    h1 { margin: 0 0 8px; color: #1f302d; font-size: 28px; }
+    h2 { margin: 26px 0 14px; color: #25443b; font-size: 20px; }
+    .description { margin: 0 0 22px; color: #667772; line-height: 1.55; }
+    .notice { margin: 16px 0; padding: 12px 15px; border-radius: 7px; }
+    .notice-success { border: 1px solid #a8d8be; background: #effaf3; color: #17643c; }
+    .notice-warning { border: 1px solid #edcf91; background: #fff9e9; color: #775516; }
+    .portal-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 18px; border: 1px solid #dce5e1; border-radius: 9px; background: #f8faf9; }
+    .portal-form label { display: grid; gap: 6px; min-width: min(320px, 100%); color: #344b44; font-weight: 600; }
+    .portal-form select { min-height: 42px; padding: 8px 11px; border: 1px solid #c5d6cf; border-radius: 6px; background: #fff; color: #1f302d; font: inherit; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; border: 1px solid #dce5e1; text-align: left; vertical-align: middle; }
+    th { background: #e9f0ed; color: #344b44; }
+    td:first-child { width: 70px; text-align: center; }
+    .account-name { font-weight: 700; }
+    .account-meta { color: #667772; font-size: 13px; }
+    .permission-table td:first-child { width: 70px; }
+    .permission-table td:nth-child(2) { min-width: 240px; font-weight: 600; }
+    .permission-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+    .permission-mode-list { display: grid; grid-template-columns: repeat(2, minmax(110px, 1fr)); gap: 8px 12px; }
+    .page-choice-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; min-width: 310px; }
+    .page-choice { display: flex; align-items: center; gap: 7px; color: #344b44; font-size: 13px; cursor: pointer; }
+    .page-choice input { width: 16px; height: 16px; accent-color: #17785f; }
+    .page-choice input:disabled { cursor: not-allowed; }
+    .permission-preview { padding: 8px 13px; border: 1px solid #17785f; border-radius: 6px; background: #17785f; color: #fff; font: inherit; font-size: 14px; }
+    .permission-choice { display: inline-flex; align-items: center; gap: 7px; color: #344b44; cursor: pointer; white-space: nowrap; }
+    .permission-choice input { width: 18px; height: 18px; accent-color: #17785f; }
+    .permission-choice input[type="radio"] { appearance: none; border: 2px solid #9aafa6; border-radius: 4px; background: #fff; cursor: pointer; }
+    .permission-choice input[type="radio"]:checked { border-color: #17785f; background: #17785f; box-shadow: inset 0 0 0 3px #fff; }
+    .permission-choice input[type="radio"]:focus-visible { outline: 2px solid #17785f; outline-offset: 2px; }
+    .form-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 9px 15px; border: 0; border-radius: 7px; background: #08745e; color: #fff; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .button:hover { background: #065f4d; color: #fff; }
+    .button-secondary { border: 1px solid #c5d6cf; background: #fff; color: #24483e; }
+    .button-secondary:hover { background: #f3faf7; color: #12624d; }
+    .empty-state { padding: 18px; color: #667772; text-align: center; }
+    @media (max-width: 650px) {
+      main { width: calc(100% - 24px); padding: 18px; margin: 18px auto; }
+      h1 { font-size: 23px; }
+      th, td { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <main>
+    <h1><%= title %></h1>
+    <p class="description">Chọn cổng để xem tài khoản thuộc cổng đó, sau đó mở từng tài khoản để cấp quyền chức năng riêng.</p>
+    <% if (saved) { %>
+      <div class="notice notice-success" role="status">Đã lưu quyền chức năng cho tài khoản.</div>
+    <% } %>
+    <form class="portal-form" method="get" action="/nguoi-dung/uy-quyen">
+      <label for="portal">Cổng tài khoản
+        <select id="portal" name="role" required>
+          <option value="">-- Chọn cổng --</option>
+          <% roles.forEach((role) => { %>
+            <option value="<%= role.slug %>" <%= selectedRole === role.slug ? 'selected' : '' %>><%= role.title %></option>
+          <% }); %>
+        </select>
+      </label>
+      <button class="button" type="submit">Hiện danh sách tài khoản</button>
+    </form>
+
+    <% if (selectedRole) { %>
+      <h2>Danh sách tài khoản - <%= roles.find((role) => role.slug === selectedRole)?.title %></h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">STT</th><th scope="col">Tài khoản</th><th scope="col">Trạng thái</th><th scope="col">Cổng được cấp</th><th scope="col">Thao tác</th></tr></thead>
+          <tbody>
+            <% if (accounts.length === 0) { %>
+              <tr><td class="empty-state" colspan="5">Chưa có tài khoản thuộc cổng này.</td></tr>
+            <% } else { %>
+              <% accounts.forEach((account, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td><span class="account-name"><%= account.ho_ten || account.ten_dang_nhap %></span><br /><span class="account-meta">@<%= account.ten_dang_nhap %></span></td>
+                  <td><%= account.duoc_dang_nhap ? 'Được đăng nhập' : 'Đã khóa' %></td>
+                  <td><%= roles.filter((role) => account.cong_vai_tro.includes(role.slug)).map((role) => role.title).join(', ') %></td>
+                  <td><a class="button button-secondary" href="/nguoi-dung/uy-quyen?role=<%= selectedRole %>&amp;accountId=<%= account.ma_nguoi_dung %>">Ủy quyền</a></td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (selectedAccount) { %>
+      <h2>Quyền chức năng của <%= selectedAccount.ho_ten || selectedAccount.ten_dang_nhap %></h2>
+      <p class="description">Chọn một trạng thái cho mỗi quyền. “Cho phép” bỏ qua thiết lập tắt ở cấp hệ thống; “Ngăn chặn” chỉ chặn thao tác ghi, vẫn cho phép xem; “Cấm” chặn toàn bộ; “Cấp quyền” giữ nguyên quy tắc cấp quyền hiện tại.</p>
+      <form method="post" action="/nguoi-dung/uy-quyen">
+        <input type="hidden" name="role" value="<%= selectedRole %>" />
+        <input type="hidden" name="accountId" value="<%= selectedAccount.ma_nguoi_dung %>" />
+        <div class="table-wrap">
+          <table class="permission-table">
+            <thead><tr><th scope="col">STT</th><th scope="col">Tên quyền</th><th scope="col">Nút quyền</th><th scope="col">Trang hiển thị</th></tr></thead>
+            <tbody>
+              <% permissions.forEach((permission, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td><%= permission.title %></td>
+                  <td>
+                    <div class="permission-cell">
+                      <button class="permission-preview" type="button" disabled><%= permission.button %></button>
+                      <div class="permission-mode-list" role="group" aria-label="Trạng thái <%= permission.title %>">
+                        <% permissionModesList.forEach((mode) => { %>
+                          <label class="permission-choice">
+                            <input type="radio" name="permission_<%= permission.id %>" value="<%= mode %>" data-permission-toggle="<%= permission.id %>" <%= permissionModes[permission.id] === mode ? 'checked' : '' %> <%= mode === 'cap-quyen' && !globalPermissionIds.includes(permission.id) ? 'disabled' : '' %> required />
+                            <span><%= mode === 'cho-phep' ? 'Cho phép' : mode === 'ngan-chan' ? 'Ngăn chặn' : mode === 'cam' ? 'Cấm' : 'Cấp quyền' %><%= mode === 'cap-quyen' && !globalPermissionIds.includes(permission.id) ? ' (tắt ở cấp hệ thống)' : '' %></span>
+                          </label>
+                        <% }); %>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="page-choice-section" data-page-section="<%= permission.id %>" <%= permissionModes[permission.id] === 'cam' ? 'hidden' : '' %>>
+                      <p class="account-meta">Các trang đã chọn sẽ hiện nút “<%= permission.button %>”. Tích thêm để hiện nút trên trang khác.</p>
+                      <input type="hidden" name="page_configured_<%= permission.id %>" value="1" />
+                      <div class="page-choice-list">
+                        <% pages.forEach((page) => { %>
+                          <label class="page-choice">
+                            <input type="checkbox" name="pages_<%= permission.id %>" value="<%= page.id %>" data-permission-page="<%= permission.id %>" <%= defaultPagesByPermission[permission.id].includes(page.id) ? 'data-default-page="true"' : '' %> <%= pagePlacements[permission.id]?.includes(page.id) || (permissionModes[permission.id] === 'cho-phep' && !Object.prototype.hasOwnProperty.call(pagePlacements, permission.id) && defaultPagesByPermission[permission.id].includes(page.id)) ? 'checked' : '' %> <%= permissionModes[permission.id] === 'cam' ? 'disabled' : '' %> />
+                            <span><%= page.title %></span>
+                          </label>
+                        <% }); %>
+                      </div>
+                    </div>
+                    <span class="account-meta" data-page-hint="<%= permission.id %>" <%= permissionModes[permission.id] === 'cam' ? '' : 'hidden' %>>Chọn “Cho phép”, “Ngăn chặn” hoặc “Cấp quyền” để chọn trang hiển thị nút.</span>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-actions">
+          <button class="button" type="submit">Xác nhận ủy quyền</button>
+        </div>
+      </form>
+    <% } %>
+  </main>
+  <script>
+    document.querySelectorAll('[data-permission-toggle]').forEach((toggle) => {
+      if (toggle.type !== 'radio') return;
+      const updatePageChoices = () => {
+        if (!toggle.checked) return;
+        const canShowButtons =
+          toggle.value !== 'cam' &&
+          (toggle.value !== 'cap-quyen' || !toggle.disabled);
+        const pageSection = document.querySelector(
+          `[data-page-section="${toggle.dataset.permissionToggle}"]`,
+        );
+        const pageHint = document.querySelector(
+          `[data-page-hint="${toggle.dataset.permissionToggle}"]`,
+        );
+        if (pageSection) pageSection.hidden = !canShowButtons;
+        if (pageHint) pageHint.hidden = canShowButtons;
+        document.querySelectorAll(`[data-permission-page="${toggle.dataset.permissionToggle}"]`).forEach((choice) => {
+          choice.disabled = !canShowButtons;
+          if (canShowButtons && toggle.value === 'cho-phep' && choice.dataset.defaultPage === 'true') {
+            choice.checked = true;
+          }
+        });
+      };
+      toggle.addEventListener('change', updatePageChoices);
+      if (toggle.checked) updatePageChoices();
+    });
+  </script>
+</body>
+</html>

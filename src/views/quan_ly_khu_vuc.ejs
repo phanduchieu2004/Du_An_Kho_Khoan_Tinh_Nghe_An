@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    header { min-height: 72px; padding: 12px 30px; display: flex; align-items: center; gap: 20px; background: #057362; color: #fff; }
+    header a { color: inherit; text-decoration: none; }
+    header strong { margin-right: auto; font-size: 19px; }
+    header form { margin: 0; }
+    header button { padding: 9px 13px; border: 0; border-radius: 8px; background: #fff; color: #19332e; font-weight: 700; }
+    main { width: min(1440px, calc(100% - 48px)); margin: 28px auto; padding: 26px; background: #fff; border: 1px solid #dce5e1; border-radius: 12px; }
+    .table-wrap { overflow-x: auto; }
+    .table thead th { background: #e9f0ed; color: #344b44; }
+    .status { white-space: nowrap; }
+    @media (max-width: 650px) { header { padding: 12px 16px; } main { width: calc(100% - 24px); padding: 18px; margin: 18px auto; } }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Quản lý khu vực</strong>
+    <a href="/ho-tro">Hộp thư hỗ trợ</a>
+    <a href="/nguoi-dung/ho-so">Hồ sơ của tôi</a>
+    <form action="/dang-xuat" method="post"><button type="submit">Đăng xuất</button></form>
+  </header>
+  <main>
+    <div class="mb-4">
+      <h1 class="h3 mb-1"><%= title %></h1>
+      <p class="text-secondary mb-1">Khu vực được Admin giao: <strong><%= areaName %></strong></p>
+      <p class="text-secondary mb-0">Chỉ hiển thị Kỹ sư và Người xem có vị trí ghim nằm trong ranh giới này. Bạn có thể cập nhật hồ sơ, trạng thái đăng nhập hoặc xóa tài khoản; không thể đổi vai trò hay khu vực phân công.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-hover table-bordered align-middle">
+        <thead>
+          <tr><th>Mã</th><th>Tài khoản</th><th>Liên hệ</th><th>Nhóm</th><th>Trạng thái hồ sơ</th><th>Đăng nhập</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          <% if (accounts.length === 0) { %>
+            <tr><td class="text-center text-secondary py-4" colspan="7">Chưa có tài khoản Kỹ sư hoặc Người xem được ghim trong khu vực này.</td></tr>
+          <% } else { %>
+            <% accounts.forEach((account) => { %>
+              <tr>
+                <td><%= account.ma_nguoi_dung %></td>
+                <td><strong><%= account.ho_ten || account.ten_dang_nhap %></strong><br /><span class="text-secondary small">@<%= account.ten_dang_nhap %></span></td>
+                <td><%= account.email || '—' %><br /><span class="text-secondary small"><%= account.so_dien_thoai || 'Chưa có số điện thoại' %></span></td>
+                <td><%= account.cong_vai_tro.filter((slug) => slug === 'ky-su' || slug === 'nguoi-xem-ban-do').map((slug) => roles.find((role) => role.slug === slug)?.title).filter(Boolean).join(', ') %></td>
+                <td class="status"><%= account.trang_thai === 'DA_DUYET' ? 'Đã duyệt' : account.trang_thai === 'TU_CHOI' ? 'Từ chối' : 'Chờ duyệt' %></td>
+                <td class="status"><%= account.duoc_dang_nhap ? 'Được đăng nhập' : 'Đã khóa' %></td>
+                <td class="text-nowrap">
+                  <a class="btn btn-sm btn-outline-primary" href="/quan-ly-khu-vuc/<%= account.ma_nguoi_dung %>">Quản lý</a>
+                  <form class="d-inline" method="post" action="/quan-ly-khu-vuc/<%= account.ma_nguoi_dung %>/xoa" onsubmit="return confirm('Xóa tài khoản <%= account.ten_dang_nhap %>?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

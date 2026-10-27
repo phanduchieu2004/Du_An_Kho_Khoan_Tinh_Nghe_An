@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #000000; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+    .support-card { margin-bottom: 18px; padding: 20px; border: 1px solid #dce5e1; border-radius: 10px; background: #fff; }
+    .conversation-thread { display: flex; flex-direction: column; gap: 12px; max-height: 480px; overflow-y: auto; margin: 18px 0; padding: 18px 14px; border: 1px solid #dce5e1; border-radius: 12px; background: linear-gradient(145deg, #e9f0ed, #f7faf8); }
+    .message-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; }
+    .message-row.own { justify-content: flex-end; }
+    .message-row.other { justify-content: flex-start; }
+    .message-avatar { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border: 1px solid #dce5e1; border-radius: 50%; background: #fff; color: #17785f; font-size: 12px; font-weight: 700; }
+    .message-content { display: flex; flex-direction: column; align-items: flex-start; max-width: min(76%, 620px); }
+    .message-row.own .message-content { align-items: flex-end; }
+    .message-bubble { max-width: 100%; padding: 10px 14px; border-radius: 20px 20px 20px 5px; background: #1e2df6; color: #fff; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 2px 5px #19332e14; }
+    .message-row.own .message-bubble { border: 1px solid #128c48; border-radius: 20px 20px 5px 20px; background: #fff; color: #1f302d; }
+    .message-meta { display: flex; align-items: center; gap: 6px; margin: 4px 8px 0; color: #667772; font-size: 11px; }
+    .message-sender { font-weight: 700; }
+    .message-time { color: #74837e; font-size: 11px; white-space: nowrap; }
+    .conversation-reply { padding-top: 14px; border-top: 1px solid #e6ece9; }
+    .message-composer { display: flex; align-items: flex-end; gap: 10px; width: 100%; padding: 8px 10px 8px 16px; border: 1px solid #cfd8d4; border-radius: 24px; background: #fff; transition: border-color .15s, box-shadow .15s; }
+    .message-composer:focus-within { border-color: #9daaa5; box-shadow: 0 0 0 3px #128c4812; }
+    .message-composer textarea { display: block; flex: 1; width: 100%; min-width: 0; min-height: 28px; max-height: 196px; margin: 0; padding: 4px 0; overflow-x: hidden; overflow-y: hidden; resize: none; border: 0; outline: 0; box-shadow: none; background: transparent; color: #1f302d; font: inherit; line-height: 28px; }
+    .message-composer textarea:focus { border: 0; outline: 0; box-shadow: none; }
+    .message-composer textarea::placeholder { color: #77827e; }
+    .message-send { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: #128c48; color: #fff; }
+    .message-send:hover { background: #0e773d; color: #fff; }
+    .message-send:focus-visible { outline: 3px solid #128c4840; outline-offset: 2px; }
+    .message-send svg { width: 19px; height: 19px; }
+    .admin-inbox { display: grid; grid-template-columns: minmax(290px, 360px) minmax(0, 1fr); min-height: 620px; overflow: hidden; border: 1px solid #dce5e1; border-radius: 14px; background: #fff; box-shadow: 0 8px 26px #19332e12; }
+    .inbox-sidebar { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid #e3e9e6; }
+    .inbox-sidebar-head { padding: 18px 16px 12px; }
+    .inbox-sidebar-head h2 { margin: 0 0 12px; font-size: 22px; font-weight: 750; }
+    .inbox-search { width: 100%; padding: 10px 12px; border: 0; border-radius: 20px; background: #f0f2f5; }
+    .inbox-tabs { display: flex; align-items: center; gap: 5px; padding: 0 12px 10px; }
+    .inbox-filter { flex: 0 0 auto; padding: 6px 10px; border: 0; border-radius: 18px; background: transparent; color: #53615c; font-size: 13px; font-weight: 650; white-space: nowrap; }
+    .inbox-filter.active { background: #e7f3ff; color: #0866ff; }
+    .inbox-portal-filter { min-width: 0; flex: 1 1 auto; padding: 6px 8px; border: 1px solid #e1e6e3; border-radius: 18px; background: #fff; color: #53615c; font-size: 12px; }
+    .inbox-list { overflow-y: auto; }
+    .inbox-item { display: flex; align-items: center; gap: 11px; min-height: 78px; padding: 11px 14px; color: inherit; text-decoration: none; }
+    .inbox-item:hover, .inbox-item.selected { background: #f0f2f5; color: inherit; }
+    .inbox-avatar { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; overflow: hidden; border-radius: 50%; background: #dcece5; color: #17785f; font-size: 19px; font-weight: 750; }
+    .inbox-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .inbox-avatar span { grid-area: 1 / 1; }
+    .inbox-item-content { min-width: 0; flex: 1; }
+    .inbox-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .inbox-name { overflow: hidden; font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+    .inbox-time { flex: none; color: #77827e; font-size: 11px; }
+    .inbox-preview { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .inbox-preview-text { overflow: hidden; flex: 1; color: #68736f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .inbox-item.unread .inbox-name, .inbox-item.unread .inbox-preview-text { color: #18201d; font-weight: 750; }
+    .inbox-unread-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #111; }
+    .inbox-conversation { display: flex; min-width: 0; flex-direction: column; }
+    .inbox-conversation-head { padding: 18px 20px; border-bottom: 1px solid #e7ece9; }
+    .inbox-contact { display: flex; align-items: center; gap: 12px; }
+    .inbox-contact-avatar { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; overflow: hidden; border-radius: 50%; background: #dcece5; color: #17785f; font-size: 17px; font-weight: 750; }
+    .inbox-contact-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .inbox-contact-name { margin: 0; font-size: 17px; font-weight: 700; }
+    .inbox-profile-button { display: inline-flex; align-items: center; gap: 12px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+    .inbox-profile-button:hover .inbox-contact-name { color: #0866ff; text-decoration: underline; }
+    .profile-dialog { width: min(760px, calc(100vw - 28px)); max-width: none; max-height: min(820px, calc(100vh - 28px)); padding: 0; overflow: hidden; border: 0; border-radius: 16px; background: #fff; box-shadow: 0 24px 80px #0005; }
+    .profile-dialog::backdrop { background: #10171599; backdrop-filter: blur(2px); }
+    .profile-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #e6ece9; }
+    .profile-dialog-title { margin: 0; font-size: 15px; font-weight: 700; }
+    .profile-dialog-close { display: grid; width: 34px; height: 34px; place-items: center; border: 0; border-radius: 50%; background: #f0f2f5; color: #36413c; font-size: 22px; line-height: 1; }
+    .profile-dialog iframe { display: block; width: 100%; height: min(700px, calc(100vh - 90px)); border: 0; background: #fff; }
+    .support-manager-header { min-height: 72px; padding: 12px 24px; display: flex; align-items: center; gap: 18px; background: #057362; color: #fff; }
+    .support-manager-header a { color: inherit; text-decoration: none; }
+    .support-manager-header > a:first-child { margin-right: auto; font-size: 19px; font-weight: 700; }
+    .support-manager-header form { margin: 0; }
+    .support-manager-header form button { padding: 9px 13px; border: 0; border-radius: 8px; background: #fff; color: #19332e; font-weight: 700; }
+    .engineer-contact-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 10px 12px; border: 1px solid #dce5e1; border-radius: 10px; background: #fff; }
+    .engineer-contact-result[hidden] { display: none; }
+    .inbox-empty { display: grid; flex: 1; place-items: center; padding: 30px; color: #77827e; text-align: center; }
+    .inbox-conversation .conversation-thread { flex: 1; max-height: 500px; min-height: 240px; margin: 0; border: 0; border-radius: 0; }
+    .inbox-conversation .conversation-reply { margin: 0 18px 16px; }
+    @media (max-width: 760px) {
+      .admin-inbox { grid-template-columns: minmax(0, 1fr); }
+      .inbox-sidebar { max-height: 360px; border-right: 0; border-bottom: 1px solid #e3e9e6; }
+      .inbox-tabs { gap: 4px; padding-right: 10px; padding-left: 10px; }
+      .inbox-filter { padding-right: 8px; padding-left: 8px; font-size: 12px; }
+      .inbox-portal-filter { padding-right: 6px; padding-left: 6px; font-size: 11px; }
+      .inbox-conversation-head { padding: 14px; }
+      .inbox-conversation .conversation-thread { min-height: 220px; }
+      .support-manager-header { flex-wrap: wrap; gap: 10px 14px; padding: 12px 16px; }
+      .support-manager-header > a:first-child { flex-basis: 100%; }
+    }
+    .muted { color: #667772; }
+    @media (max-width: 700px) {
+      main { padding: 20px 12px 36px; }
+      .support-card { padding: 14px; }
+      .conversation-thread { max-height: 60vh; padding: 14px 9px; }
+      .message-content { max-width: 84%; }
+      .message-bubble { padding: 9px 12px; }
+      .message-time { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <% if (role === 'quan-tri-vien') { %>
+    <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <% } else if (role === 'quan-ly-khu-vuc') { %>
+    <header class="support-manager-header">
+      <a href="/quan-ly-khu-vuc">Quản lý khu vực</a>
+      <a href="/ho-tro">Hộp thư hỗ trợ</a>
+      <%- include('thanh-phan/nut_ho_so') %>
+      <form action="/dang-xuat" method="post"><button type="submit">Đăng xuất</button></form>
+    </header>
+  <% } else { %>
+    <%- include('thanh-phan/thanh_dieu_huong_cong_ky_su') %>
+  <% } %>
+  <main>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+      <div>
+        <h1 class="h3 mb-1"><%= title %></h1>
+        <% if (role === 'ky-su') { %>
+          <p class="muted mb-0">Tin nhắn được lưu trong hệ thống và gắn với tài khoản <strong><%= account.ten_dang_nhap %></strong> (<%= account.email || 'Chưa cập nhật Gmail' %>).</p>
+        <% } else { %>
+          <p class="muted mb-0">Đọc và phản hồi các hội thoại hỗ trợ.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (role === 'ky-su' && !account.email) { %>
+      <div class="alert alert-warning" role="alert">
+        Vui lòng cập nhật Gmail trong <a href="/nguoi-dung/ho-so">hồ sơ tài khoản</a> trước khi gửi yêu cầu hỗ trợ.
+      </div>
+    <% } %>
+    <% if (role === 'ky-su') { %>
+      <details class="support-card">
+        <summary class="h6 mb-0">Gửi yêu cầu hỗ trợ mới</summary>
+        <form method="post" action="/ho-tro/gui" class="mt-3">
+          <label class="form-label" for="support-title">Tiêu đề</label>
+          <input class="form-control mb-3" id="support-title" name="tieu_de" maxlength="200" required />
+          <label class="form-label" for="support-message">Nội dung</label>
+          <div class="message-composer">
+            <textarea id="support-message" name="noi_dung" rows="1" maxlength="5000" placeholder="Nhập nội dung cần hỗ trợ..." data-auto-grow required></textarea>
+            <button class="message-send" type="submit" aria-label="Gửi yêu cầu hỗ trợ" <%= account.email ? '' : 'disabled' %>>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </form>
+      </details>
+      <details class="support-card">
+        <summary class="h6 mb-0">Nhắn tin cho Kỹ sư khác</summary>
+        <form class="mt-3" data-engineer-search-form>
+          <label class="form-label" for="engineer-email">Gmail Kỹ sư nhận tin</label>
+          <div class="d-flex gap-2">
+            <input class="form-control" id="engineer-email" type="email" autocomplete="email" maxlength="255" required />
+            <button class="btn btn-outline-success flex-shrink-0" type="submit">Tìm</button>
+          </div>
+          <div class="alert alert-danger mt-2 mb-0" role="alert" data-engineer-search-error hidden></div>
+          <div class="engineer-contact-result" data-engineer-search-result hidden>
+            <div class="d-flex align-items-center gap-2">
+              <span class="inbox-avatar" aria-hidden="true">
+                <img data-engineer-avatar alt="" hidden />
+                <span data-engineer-initial hidden></span>
+              </span>
+              <div>
+                <strong data-engineer-name></strong>
+                <div class="small text-secondary" data-engineer-address></div>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-success" type="button" data-engineer-select>Nhắn tin</button>
+          </div>
+        </form>
+        <form method="post" action="/ho-tro/chat-ky-su" class="mt-3" data-engineer-chat-form hidden>
+          <input type="hidden" name="recipient_id" data-engineer-recipient />
+          <label class="form-label" for="first-engineer-message">Tin nhắn đầu tiên</label>
+          <div class="message-composer">
+            <textarea id="first-engineer-message" name="noi_dung" rows="1" maxlength="5000" placeholder="Nhập tin nhắn..." data-auto-grow required></textarea>
+            <button class="message-send" type="submit" aria-label="Gửi tin nhắn">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </form>
+      </details>
+    <% } %>
+      <section class="admin-inbox" aria-label="Hộp thư hỗ trợ">
+        <aside class="inbox-sidebar">
+          <div class="inbox-sidebar-head">
+            <h2>Đoạn chat</h2>
+            <input class="inbox-search" type="search" placeholder="Tìm tài khoản hoặc tin nhắn" aria-label="Tìm tài khoản hoặc tin nhắn" data-inbox-search />
+          </div>
+          <div class="inbox-tabs" role="group" aria-label="Lọc hội thoại">
+            <button type="button" class="inbox-filter active" data-inbox-filter="all">Tất cả</button>
+            <button type="button" class="inbox-filter" data-inbox-filter="unread">Chưa đọc</button>
+            <label class="visually-hidden" for="inbox-portal-filter">Lọc theo cổng</label>
+            <% if (role !== 'ky-su') { %>
+              <select class="inbox-portal-filter" id="inbox-portal-filter" data-inbox-portal>
+                <option value="all">Tất cả cổng</option>
+                <% portalOptions.forEach((portal) => { %>
+                  <option value="<%= portal.slug %>"><%= portal.title %></option>
+                <% }); %>
+              </select>
+            <% } %>
+          </div>
+          <nav class="inbox-list" aria-label="Danh sách tài khoản đã nhắn">
+            <% if (conversations.length === 0) { %>
+              <p class="text-secondary p-3 mb-0">Chưa có tin nhắn hỗ trợ.</p>
+            <% } else { %>
+              <% conversations.forEach((conversation) => { %>
+                <a class="inbox-item <%= conversation.unread ? 'unread' : '' %> <%= selectedConversation && Number(selectedConversation.id) === Number(conversation.id) ? 'selected' : '' %>"
+                   href="/ho-tro?conversation=<%= conversation.id %>#yeu-cau-<%= conversation.id %>"
+                   data-inbox-row
+                   data-unread="<%= conversation.unread ? 'true' : 'false' %>"
+                   data-portals="<%= Array.isArray(conversation.engineer_roles) ? conversation.engineer_roles.join(' ') : '' %>"
+                   data-search-text="<%= `${conversation.peer_name || conversation.engineer_name || conversation.engineer_username} ${conversation.peer_email || conversation.engineer_email || ''} ${conversation.tieu_de} ${conversation.latest_message || ''}` %>">
+                  <span class="inbox-avatar" aria-hidden="true">
+                    <% const contactId = role === 'ky-su' ? conversation.peer_id : conversation.engineer_id; %>
+                    <% if (contactId) { %>
+                      <img src="/nguoi-dung/<%= contactId %>/anh" alt="" onerror="this.hidden = true; this.nextElementSibling.hidden = false" />
+                    <% } %>
+                    <span <%= contactId ? 'hidden' : '' %>><%= (conversation.peer_name || conversation.engineer_name || conversation.engineer_username || 'A').slice(0, 1).toUpperCase() %></span>
+                  </span>
+                  <span class="inbox-item-content">
+                    <span class="inbox-item-top">
+                      <span class="inbox-name"><%= conversation.peer_name || conversation.engineer_name || conversation.engineer_username %></span>
+                      <time class="inbox-time"><%= conversation.latest_message_at ? new Date(conversation.latest_message_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '' %></time>
+                    </span>
+                    <span class="inbox-preview">
+                      <span class="inbox-preview-text"><%= Number(conversation.latest_sender_id) === Number(viewerId) ? 'Bạn: ' : '' %><%= conversation.latest_message || conversation.tieu_de %></span>
+                      <% if (conversation.unread) { %><span class="inbox-unread-dot" aria-label="Chưa đọc"></span><% } %>
+                    </span>
+                    <span class="visually-hidden"><%= conversation.tieu_de %></span>
+                  </span>
+                </a>
+              <% }); %>
+            <% } %>
+          </nav>
+        </aside>
+        <section class="inbox-conversation">
+          <% if (!selectedConversation) { %>
+            <div class="inbox-empty">Chọn một hội thoại để đọc và trả lời tin nhắn.</div>
+          <% } else { %>
+            <header class="inbox-conversation-head" id="yeu-cau-<%= selectedConversation.id %>">
+              <% if (role !== 'ky-su' && selectedConversation.engineer_id) { %>
+              <button class="inbox-profile-button" type="button" data-profile-open="/nguoi-dung/<%= selectedConversation.engineer_id %>/chi-tiet?embed=1" aria-haspopup="dialog">
+              <% } else { %>
+              <div class="inbox-profile-button">
+              <% } %>
+                <span class="inbox-contact-avatar" aria-hidden="true">
+                  <% const selectedContactId = role === 'ky-su' ? selectedConversation.peer_id : selectedConversation.engineer_id; %>
+                  <% if (selectedContactId) { %>
+                    <img src="/nguoi-dung/<%= selectedContactId %>/anh" alt="" onerror="this.hidden = true; this.nextElementSibling.hidden = false" />
+                  <% } %>
+                  <span <%= selectedContactId ? 'hidden' : '' %>><%= (selectedConversation.peer_name || selectedConversation.engineer_name || selectedConversation.engineer_username || 'A').slice(0, 1).toUpperCase() %></span>
+                </span>
+                <h2 class="inbox-contact-name"><%= selectedConversation.peer_name || selectedConversation.engineer_name || selectedConversation.engineer_username %></h2>
+              <% if (role !== 'ky-su' && selectedConversation.engineer_id) { %>
+              </button>
+              <% } else { %>
+              </div>
+              <% } %>
+            </header>
+            <div class="conversation-thread" aria-label="Nội dung hội thoại">
+              <% selectedConversation.messages.forEach((message) => { %>
+                <div class="message-row <%= Number(message.sender_id) === Number(viewerId) ? 'own' : 'other' %>">
+                  <% if (Number(message.sender_id) !== Number(viewerId)) { %>
+                    <span class="message-avatar" aria-hidden="true"><%= (message.sender_name || 'K').slice(0, 1).toUpperCase() %></span>
+                  <% } %>
+                  <div class="message-content">
+                    <div class="message-bubble"><%= message.noi_dung %></div>
+                    <div class="message-meta">
+                      <span class="message-sender"><%= message.sender_name %></span>
+                      <time class="message-time" datetime="<%= new Date(message.ngay_tao).toISOString() %>"><%= new Date(message.ngay_tao).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) %></time>
+                    </div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+            <form method="post" action="/ho-tro/<%= selectedConversation.id %>/tra-loi" class="conversation-reply">
+              <label class="form-label" for="reply-<%= selectedConversation.id %>"><%= role === 'ky-su' ? 'Tin nhắn' : 'Trả lời Kỹ sư' %></label>
+              <div class="message-composer">
+                <textarea id="reply-<%= selectedConversation.id %>" name="noi_dung" rows="1" maxlength="5000" placeholder="Nhập tin nhắn..." data-auto-grow required></textarea>
+                <button class="message-send" type="submit" aria-label="Gửi trả lời">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </form>
+          <% } %>
+        </section>
+      </section>
+      <dialog class="profile-dialog" data-profile-dialog aria-labelledby="profile-dialog-title">
+        <div class="profile-dialog-head">
+          <h2 class="profile-dialog-title" id="profile-dialog-title">Hồ sơ tài khoản</h2>
+          <button type="button" class="profile-dialog-close" data-profile-close aria-label="Đóng hồ sơ">×</button>
+        </div>
+        <iframe title="Hồ sơ người đang nhắn" data-profile-frame></iframe>
+      </dialog>
+      <script>
+        const inboxSearch = document.querySelector('[data-inbox-search]');
+        const inboxPortal = document.querySelector('[data-inbox-portal]');
+        const inboxRows = [...document.querySelectorAll('[data-inbox-row]')];
+        let inboxFilter = 'all';
+        function filterInbox() {
+          const query = inboxSearch.value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLocaleLowerCase('vi').trim();
+          inboxRows.forEach((row) => {
+            const text = row.dataset.searchText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLocaleLowerCase('vi');
+            const portals = row.dataset.portals.split(' ');
+            const portalMismatch = inboxPortal && inboxPortal.value !== 'all' && !portals.includes(inboxPortal.value);
+            row.hidden = (inboxFilter === 'unread' && row.dataset.unread !== 'true') || (query && !text.includes(query)) || portalMismatch;
+          });
+        }
+        inboxSearch.addEventListener('input', filterInbox);
+        inboxPortal?.addEventListener('change', filterInbox);
+        document.querySelectorAll('[data-inbox-filter]').forEach((button) => {
+          button.addEventListener('click', () => {
+            inboxFilter = button.dataset.inboxFilter;
+            document.querySelectorAll('[data-inbox-filter]').forEach((item) => item.classList.toggle('active', item === button));
+            filterInbox();
+          });
+        });
+        const profileDialog = document.querySelector('[data-profile-dialog]');
+        const profileFrame = document.querySelector('[data-profile-frame]');
+        document.querySelector('[data-profile-open]')?.addEventListener('click', (event) => {
+          profileFrame.src = event.currentTarget.dataset.profileOpen;
+          profileDialog.showModal();
+        });
+        document.querySelector('[data-profile-close]').addEventListener('click', () => profileDialog.close());
+        profileDialog.addEventListener('click', (event) => {
+          if (event.target === profileDialog) profileDialog.close();
+        });
+        const engineerSearchForm = document.querySelector('[data-engineer-search-form]');
+        if (engineerSearchForm) {
+          const searchResult = document.querySelector('[data-engineer-search-result]');
+          const searchError = document.querySelector('[data-engineer-search-error]');
+          const chatForm = document.querySelector('[data-engineer-chat-form]');
+          let foundEngineer = null;
+          engineerSearchForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            searchResult.hidden = true;
+            chatForm.hidden = true;
+            searchError.hidden = true;
+            try {
+              const email = document.querySelector('#engineer-email').value.trim();
+              const response = await fetch(`/ho-tro/tim-ky-su?email=${encodeURIComponent(email)}`, {
+                headers: { Accept: 'application/json' },
+              });
+              const result = await response.json();
+              if (!response.ok) throw new Error(result.message || 'Không tìm thấy tài khoản Kỹ sư.');
+              foundEngineer = result;
+              document.querySelector('[data-engineer-name]').textContent = result.name;
+              document.querySelector('[data-engineer-address]').textContent = result.email;
+              const avatar = document.querySelector('[data-engineer-avatar]');
+              avatar.src = `/nguoi-dung/${result.id}/anh`;
+              avatar.hidden = false;
+              document.querySelector('[data-engineer-initial]').textContent = result.name.slice(0, 1).toUpperCase();
+              avatar.onerror = () => {
+                avatar.hidden = true;
+                document.querySelector('[data-engineer-initial]').hidden = false;
+              };
+              searchResult.hidden = false;
+            } catch (error) {
+              searchError.textContent = error.message;
+              searchError.hidden = false;
+            }
+          });
+          document.querySelector('[data-engineer-select]').addEventListener('click', () => {
+            if (!foundEngineer) return;
+            document.querySelector('[data-engineer-recipient]').value = foundEngineer.id;
+            chatForm.hidden = false;
+            chatForm.querySelector('textarea').focus();
+          });
+        }
+      </script>
+    <script>
+      document.querySelectorAll('[data-auto-grow]').forEach((textarea) => {
+        const resize = () => {
+          textarea.style.height = 'auto';
+          const maxHeight = Number.parseFloat(getComputedStyle(textarea).maxHeight);
+          textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+          textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+        };
+        textarea.addEventListener('input', resize);
+        resize();
+      });
+    </script>
+  </main>
+</body>
+</html>

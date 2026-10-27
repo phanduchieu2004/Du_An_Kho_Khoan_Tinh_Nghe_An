@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { width: min(760px, calc(100% - 32px)); margin: 36px auto; padding: 28px; background: #fff; border: 1px solid #dce5e1; border-radius: 12px; }
+    .role-options { display: grid; gap: 12px; }
+    .role-option { padding: 14px; border: 1px solid #dce5e1; border-radius: 9px; }
+    .role-option p { margin: 3px 0 0 25px; color: #667772; font-size: 13px; }
+    .help { color: #667772; font-size: 13px; }
+    .section-heading { margin: 28px 0 16px; padding-bottom: 9px; border-bottom: 1px solid #e2eae6; color: #25443b; font-size: 17px; font-weight: 700; }
+    .readonly-value { min-height: 38px; padding: 8px 12px; border: 1px solid #e2eae6; border-radius: 6px; background: #f7faf8; color: #667772; }
+    #assigned-area-map { height: 440px; margin-top: 14px; border: 1px solid #dce5e1; border-radius: 9px; z-index: 0; }
+    .assigned-area-search-control { position: relative; width: min(490px, calc(100vw - 100px)); margin: 10px 10px 0 !important; border: 0 !important; background: transparent !important; }
+    .assigned-area-search { height: 44px; display: flex; align-items: center; gap: 10px; border: 1px solid #e2e9e7; background: #f8faf9; border-radius: 11px; padding: 0 6px 0 15px; box-shadow: 0 5px 18px #233d3626; transition: border-color .2s, box-shadow .2s; }
+    .assigned-area-search:focus-within { border-color: #7dbdab; box-shadow: 0 0 0 3px #d9f1e9, 0 5px 18px #233d3626; }
+    .assigned-area-search svg { width: 18px; height: 18px; flex: none; color: #8a9c9b; }
+    .assigned-area-search input { border: 0; outline: 0; background: none; flex: 1; width: 0; min-width: 0; color: #1f302d; font-size: 13px; }
+    .assigned-area-search input::placeholder { color: #98a8a6; }
+    .assigned-area-search button { border: 0; border-radius: 8px; background: #16836e; color: #fff; font-size: 12px; font-weight: 700; padding: 8px 14px; white-space: nowrap; }
+    .assigned-area-search button:hover { background: #116956; }
+    .assigned-area-search-results { display: none; position: absolute; top: calc(100% + 9px); left: 0; width: 100%; max-height: min(60vh, 420px); border: 1px solid #dce5e1; border-radius: 13px; background: #fff; box-shadow: 0 15px 40px #233d3640; overflow-y: auto; }
+    .assigned-area-search-results.open { display: block; }
+    .assigned-area-search-result { width: 100%; text-align: left; border: 0; border-bottom: 1px solid #e2eae6; background: #fff; padding: 12px 15px; color: #1f302d; font-size: 12px; line-height: 1.5; }
+    .assigned-area-search-result:hover { background: #f1f8f5; }
+    .assigned-area-search-info { margin: 0; padding: 15px; color: #667772; font-size: 12px; line-height: 1.5; }
+    .assigned-area-search-credit { padding: 9px 15px; color: #667772; font-size: 10px; background: #f8faf9; }
+    .assigned-area-search-credit a { color: #16836e; }
+    .assigned-area-popup { min-width: 210px; }
+    .assigned-area-popup-actions { display: grid; gap: 7px; margin-top: 10px; }
+    .assigned-area-popup-actions button { padding: 7px 9px; border: 1px solid #c92a2a; border-radius: 5px; background: #fff; color: #a61e1e; cursor: pointer; }
+    .assigned-area-popup-actions button:hover { background: #fff1f1; }
+    @media (max-width: 650px) { main { padding: 19px; margin: 18px auto; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <main>
+    <a href="/nguoi-dung/quyen/<%= selectedRole || 'quan-tri-vien' %>" class="text-decoration-none">← Danh sách tài khoản</a>
+    <h1 class="h3 mt-3 mb-1"><%= title %></h1>
+    <% if (account) { %><p class="help mb-4">Mã tài khoản: <%= account.ma_nguoi_dung %></p><% } else { %><p class="help mb-4">Tạo tài khoản mới và chọn cổng đăng nhập được cấp.</p><% } %>
+
+    <form method="post" action="<%= account ? `/nguoi-dung/${account.ma_nguoi_dung}/cap-nhat` : '/nguoi-dung/them' %>">
+      <input type="hidden" name="nguoi_dung_role_scope" value="<%= selectedRole || '' %>" />
+      <div class="mb-3">
+        <label class="form-label" for="username">Tên đăng nhập</label>
+        <input class="form-control" id="username" name="ten_dang_nhap" value="<%= account?.ten_dang_nhap || '' %>" minlength="2" maxlength="100" pattern="[\p{L}\p{N}._-]+" autocomplete="off" required />
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="fullName">Họ tên</label>
+        <input class="form-control" id="fullName" name="ho_ten" value="<%= account?.ho_ten || '' %>" maxlength="255" />
+      </div>
+      <h2 class="section-heading">Thông tin liên hệ và chuyên môn</h2>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-control" id="email" name="email" type="email" value="<%= account?.email || '' %>" maxlength="255" autocomplete="email" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="phone">Số điện thoại</label>
+          <input class="form-control" id="phone" name="so_dien_thoai" type="tel" value="<%= account?.so_dien_thoai || '' %>" maxlength="20" autocomplete="tel" />
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="address">Địa chỉ</label>
+          <textarea class="form-control" id="address" name="dia_chi" rows="2"><%= account?.dia_chi || '' %></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="engineerCode">Mã kỹ sư</label>
+          <input class="form-control" id="engineerCode" name="ma_ky_su" value="<%= account?.ma_ky_su || '' %>" maxlength="50" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="specialty">Chuyên ngành</label>
+          <input class="form-control" id="specialty" name="chuyen_nganh" value="<%= account?.chuyen_nganh || '' %>" maxlength="100" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="organization">Đơn vị công tác</label>
+          <input class="form-control" id="organization" name="don_vi_cong_tac" value="<%= account?.don_vi_cong_tac || '' %>" maxlength="255" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="certificate">Số chứng chỉ hành nghề</label>
+          <input class="form-control" id="certificate" name="so_chung_chi_hanh_nghe" value="<%= account?.so_chung_chi_hanh_nghe || '' %>" maxlength="100" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="accountStatus">Trạng thái hồ sơ</label>
+          <select class="form-select" id="accountStatus" name="trang_thai" required>
+            <% accountStatuses.forEach((status) => { %>
+              <option value="<%= status %>" <%= (account?.trang_thai || 'CHO_DUYET') === status ? 'selected' : '' %>><%= status === 'CHO_DUYET' ? 'Chờ duyệt' : status === 'DA_DUYET' ? 'Đã duyệt' : 'Từ chối' %></option>
+            <% }); %>
+          </select>
+        </div>
+        <% if (account) { %>
+          <input type="hidden" name="khu_vuc_duoc_xem" value="<%= account.khu_vuc_duoc_xem || '' %>" />
+          <input type="hidden" name="khu_vuc_phan_cong_tu_ngay" value="<%= account.khu_vuc_phan_cong_tu_ngay || '' %>" />
+          <input type="hidden" name="khu_vuc_phan_cong_den_ngay" value="<%= account.khu_vuc_phan_cong_den_ngay || '' %>" />
+          <input type="hidden" name="khu_vuc_phan_cong_ranh_gioi" value="<%= account.khu_vuc_phan_cong_ranh_gioi ? JSON.stringify(account.khu_vuc_phan_cong_ranh_gioi) : '' %>" />
+          <input type="hidden" name="khu_vuc_phan_cong_vi_do" value="<%= account.khu_vuc_phan_cong_vi_do ?? '' %>" />
+          <input type="hidden" name="khu_vuc_phan_cong_kinh_do" value="<%= account.khu_vuc_phan_cong_kinh_do ?? '' %>" />
+        <% } else { %>
+          <div class="col-12">
+            <label class="form-label" for="viewingArea">Khu vực được phân công</label>
+            <textarea class="form-control" id="viewingArea" name="khu_vuc_duoc_xem" rows="2"></textarea>
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label" for="assignedAreaStartDate">Ngày bắt đầu</label>
+                <input class="form-control" id="assignedAreaStartDate" name="khu_vuc_phan_cong_tu_ngay" type="date" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="assignedAreaEndDate">Ngày kết thúc</label>
+                <input class="form-control" id="assignedAreaEndDate" name="khu_vuc_phan_cong_den_ngay" type="date" />
+              </div>
+            </div>
+            <div class="form-text">Kỹ sư chỉ truy cập công trình từ ngày bắt đầu đến hết ngày kết thúc theo giờ Việt Nam. Để trống cả hai ngày nếu không giới hạn thời gian.</div>
+            <input type="hidden" id="assignedAreaGeometry" name="khu_vuc_phan_cong_ranh_gioi" />
+            <input type="hidden" id="assignedAreaLatitude" name="khu_vuc_phan_cong_vi_do" />
+            <input type="hidden" id="assignedAreaLongitude" name="khu_vuc_phan_cong_kinh_do" />
+            <div class="form-text">Tìm địa chỉ hoặc bấm vào bản đồ để ghim vị trí. Chọn cấp ranh giới trong ghim; khu vực được khoanh sẽ được thêm vào nội dung phân công.</div>
+            <div id="assigned-area-map" aria-label="Bản đồ chọn khu vực được phân công"></div>
+            <p class="help mt-2 mb-0" id="assigned-area-map-status" role="status">Bấm vào bản đồ để ghim một vị trí.</p>
+          </div>
+        <% } %>
+        <% if (account) { %>
+          <div class="col-md-6">
+            <label class="form-label">Ngày tạo</label>
+            <div class="readonly-value"><%= account.ngay_tao ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(account.ngay_tao) : '—' %></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Lần đăng nhập cuối</label>
+            <div class="readonly-value"><%= account.lan_dang_nhap_cuoi ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(account.lan_dang_nhap_cuoi) : 'Chưa đăng nhập' %></div>
+          </div>
+        <% } %>
+      </div>
+      <h2 class="section-heading">Quyền truy cập</h2>
+      <div class="mb-4">
+        <label class="form-label" for="password"><%= account ? 'Mật khẩu mới' : 'Mật khẩu' %></label>
+        <input class="form-control" id="password" name="mat_khau" type="password" autocomplete="new-password" maxlength="255" <%= account ? '' : 'minlength="8" required' %> />
+        <% if (account) { %><p class="help mt-1 mb-0">Để trống để giữ nguyên mật khẩu hiện tại. Mật khẩu cũ không được hiển thị.</p><% } else { %><p class="help mt-1 mb-0">Tối thiểu 8 ký tự.</p><% } %>
+      </div>
+
+      <fieldset class="mb-4">
+        <legend class="form-label fs-6 fw-semibold">Cổng đăng nhập được cấp</legend>
+        <div class="role-options">
+          <% roles.forEach((role) => { %>
+            <label class="role-option" for="role-<%= role.slug %>">
+              <span class="form-check">
+                <input class="form-check-input" type="checkbox" id="role-<%= role.slug %>" name="cong_vai_tro" value="<%= role.slug %>" <%= account ? (account.cong_vai_tro.includes(role.slug) ? 'checked' : '') : (selectedRole === role.slug ? 'checked' : '') %> />
+                <span class="form-check-label fw-semibold"><%= role.title %></span>
+              </span>
+              <p><%= role.description %></p>
+            </label>
+          <% }); %>
+        </div>
+      </fieldset>
+
+      <div class="form-check form-switch mb-4">
+        <input class="form-check-input" type="checkbox" role="switch" id="login-enabled" name="duoc_dang_nhap" value="true" <%= account ? (account.duoc_dang_nhap ? 'checked' : '') : 'checked' %> />
+        <label class="form-check-label fw-semibold" for="login-enabled">Cho phép tài khoản đăng nhập</label>
+      </div>
+
+      <div class="d-flex flex-wrap justify-content-between gap-2">
+        <a class="btn btn-outline-secondary" href="/nguoi-dung/quyen/<%= selectedRole || 'quan-tri-vien' %>">Hủy</a>
+        <button class="btn btn-primary" type="submit">Lưu tài khoản</button>
+      </div>
+    </form>
+    <% if (account) { %>
+      <hr class="my-4" />
+      <form method="post" action="/nguoi-dung/<%= account.ma_nguoi_dung %>/xoa" onsubmit="return confirm('Xóa tài khoản <%= account.ten_dang_nhap %>?');">
+        <input type="hidden" name="nguoi_dung_role_scope" value="<%= selectedRole || '' %>" />
+        <button class="btn btn-outline-danger" type="submit">Xóa tài khoản này</button>
+      </form>
+    <% } %>
+  </main>
+  <% if (!account) { %>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
+  <script>
+    (() => {
+      const mapElement = document.getElementById('assigned-area-map');
+      const areaInput = document.getElementById('viewingArea');
+      const status = document.getElementById('assigned-area-map-status');
+      const assignedGeometryInput = document.getElementById('assignedAreaGeometry');
+      const assignedLatitudeInput = document.getElementById('assignedAreaLatitude');
+      const assignedLongitudeInput = document.getElementById('assignedAreaLongitude');
+      if (!mapElement || !areaInput || typeof L === 'undefined') {
+        status.textContent = 'Không tải được bản đồ. Vui lòng tải lại trang hoặc nhập khu vực bằng văn bản.';
+        return;
+      }
+
+      const map = L.map(mapElement, { zoomControl: false }).setView([16.15, 106.15], 5);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      const searchControl = L.control({ position: 'topleft' });
+      searchControl.onAdd = () => {
+        const container = L.DomUtil.create('div', 'assigned-area-search-control');
+        const search = document.createElement('div');
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const iconCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        const iconHandle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const input = document.createElement('input');
+        const button = document.createElement('button');
+        const results = document.createElement('div');
+        search.className = 'assigned-area-search';
+        search.setAttribute('role', 'search');
+        icon.setAttribute('viewBox', '0 0 24 24');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', 'currentColor');
+        icon.setAttribute('stroke-width', '1.8');
+        icon.setAttribute('stroke-linecap', 'round');
+        icon.setAttribute('aria-hidden', 'true');
+        iconCircle.setAttribute('cx', '10.8');
+        iconCircle.setAttribute('cy', '10.8');
+        iconCircle.setAttribute('r', '6.8');
+        iconHandle.setAttribute('d', 'm16 16 4 4');
+        icon.append(iconCircle, iconHandle);
+        input.type = 'search';
+        input.id = 'assigned-area-search-input';
+        input.placeholder = 'Địa chỉ hoặc vĩ độ, kinh độ...';
+        input.maxLength = 200;
+        input.autocomplete = 'off';
+        input.setAttribute('aria-label', 'Tìm địa chỉ trên bản đồ');
+        button.className = 'btn btn-outline-success flex-shrink-0';
+        button.type = 'button';
+        button.textContent = 'Tìm kiếm';
+        button.setAttribute('aria-label', 'Tìm kiếm địa điểm');
+        results.className = 'assigned-area-search-results';
+        results.id = 'assigned-area-search-results';
+        results.setAttribute('role', 'listbox');
+        results.setAttribute('aria-label', 'Kết quả tìm địa chỉ');
+        search.append(icon, input, button);
+        container.append(search, results);
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+        button.addEventListener('click', () => void searchAddress());
+        input.addEventListener('keydown', event => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            void searchAddress();
+          }
+        });
+        searchControl.input = input;
+        searchControl.results = results;
+        return container;
+      };
+      searchControl.addTo(map);
+      const searchInput = searchControl.input;
+      const searchResults = searchControl.results;
+      L.control.zoom({ position: 'topleft', zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ' }).addTo(map);
+
+      let pinnedMarker;
+      let selectedBoundary;
+      let selectionId = 0;
+      let lastRequestAt = 0;
+      let nominatimQueue = Promise.resolve();
+      let pinnedAddress;
+      let assignedSelectionLayer;
+      let vietnamLandMaskPromise;
+      const redBoundaryStyle = { color: '#d62828', weight: 3, opacity: 0.95, fillColor: '#ef4444', fillOpacity: 0.08 };
+
+      function getVietnamLandMask() {
+        if (!vietnamLandMaskPromise) {
+          vietnamLandMaskPromise = fetch('/du-lieu/ranh-gioi-viet-nam.geojson')
+            .then(response => {
+              if (!response.ok) throw new Error(`Không tải được dữ liệu đất liền Việt Nam (HTTP ${response.status}).`);
+              return response.json();
+            })
+            .then(geometry => {
+              if (geometry?.type !== 'MultiPolygon' || !Array.isArray(geometry.coordinates)) {
+                throw new Error('Dữ liệu đất liền Việt Nam không hợp lệ.');
+              }
+              return geometry;
+            })
+            .catch(error => {
+              vietnamLandMaskPromise = null;
+              throw error;
+            });
+        }
+        return vietnamLandMaskPromise;
+      }
+
+      function isAreaGeometry(geometry) {
+        return geometry &&
+          (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') &&
+          Array.isArray(geometry.coordinates) &&
+          geometry.coordinates.length > 0;
+      }
+
+      function isInsideVietnam(latitude, longitude, landMask) {
+        return turf.booleanPointInPolygon(
+          turf.point([longitude, latitude]),
+          turf.feature(landMask)
+        );
+      }
+
+      function storeAssignedSelection(label, geometry, latitude, longitude) {
+        areaInput.value = label;
+        assignedGeometryInput.value = geometry ? JSON.stringify(geometry) : '';
+        assignedLatitudeInput.value = String(latitude);
+        assignedLongitudeInput.value = String(longitude);
+      }
+
+      areaInput.addEventListener('input', () => {
+        assignedGeometryInput.value = '';
+        assignedLatitudeInput.value = '';
+        assignedLongitudeInput.value = '';
+        if (pinnedMarker) {
+          map.removeLayer(pinnedMarker);
+          pinnedMarker = null;
+        }
+        if (assignedSelectionLayer) {
+          map.removeLayer(assignedSelectionLayer);
+          assignedSelectionLayer = null;
+        }
+      });
+
+      if (assignedGeometryInput.value) {
+        try {
+          const existingGeometry = JSON.parse(assignedGeometryInput.value);
+          if (isAreaGeometry(existingGeometry)) {
+            assignedSelectionLayer = L.geoJSON(existingGeometry, { style: redBoundaryStyle }).addTo(map);
+            const existingBounds = assignedSelectionLayer.getBounds();
+            if (existingBounds.isValid()) {
+              map.fitBounds(existingBounds, { padding: [24, 24], maxZoom: 14 });
+            }
+          }
+        } catch (error) {
+          console.error('Không thể hiển thị ranh giới khu vực đã lưu:', error);
+          status.textContent = 'Dữ liệu ranh giới đã lưu không hợp lệ. Hãy chọn lại khu vực trên bản đồ.';
+        }
+      } else if (areaInput.value.trim()) {
+        status.textContent =
+          'Phân công cũ chưa lưu ranh giới và tọa độ ghim. Hãy ghim vị trí, chọn cấp khoanh vùng màu đỏ rồi lưu tài khoản để kỹ sư xem đúng khu vực.';
+      }
+      const savedLatitude = Number(assignedLatitudeInput.value);
+      const savedLongitude = Number(assignedLongitudeInput.value);
+      if (
+        Number.isFinite(savedLatitude) &&
+        Number.isFinite(savedLongitude) &&
+        savedLatitude >= 6 &&
+        savedLatitude <= 24 &&
+        savedLongitude >= 101 &&
+        savedLongitude <= 118
+      ) {
+        pinnedMarker = L.marker([savedLatitude, savedLongitude]).addTo(map);
+        pinnedMarker.bindPopup(
+          createPopup(savedLatitude, savedLongitude, areaInput.value),
+          { autoPan: false }
+        );
+      }
+
+      function requestNominatim(url, requestId, failureMessage) {
+        const request = nominatimQueue.then(async () => {
+          const wait = 1100 - (Date.now() - lastRequestAt);
+          if (wait > 0) await new Promise(resolve => window.setTimeout(resolve, wait));
+          if (requestId !== selectionId) return null;
+          lastRequestAt = Date.now();
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`${failureMessage} (HTTP ${response.status}).`);
+          return response.json();
+        });
+        nominatimQueue = request.catch(() => null);
+        return request;
+      }
+
+      function createPopup(latitude, longitude, address) {
+        const container = document.createElement('div');
+        const title = document.createElement('strong');
+        const coordinates = document.createElement('div');
+        const addressText = document.createElement('div');
+        const actions = document.createElement('div');
+        title.textContent = 'Vị trí đã ghim';
+        coordinates.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        addressText.className = 'mt-1';
+        addressText.textContent = address || 'Chưa xác định được địa chỉ hành chính.';
+        actions.className = 'assigned-area-popup-actions';
+
+        [
+          ['Khoanh vùng phường/xã', 'ward'],
+          ['Khoanh vùng thành phố/quận/huyện', 'city'],
+          ['Khoanh vùng tỉnh', 'province']
+        ].forEach(([label, level]) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = label;
+          button.addEventListener('click', () => void selectAdministrativeArea(latitude, longitude, level));
+          actions.append(button);
+        });
+
+        container.className = 'assigned-area-popup';
+        container.append(title, coordinates, addressText, actions);
+        return container;
+      }
+
+      function addressParts(address) {
+        return [
+          address.ward || address.village || address.suburb || address.quarter || address.neighbourhood,
+          address.city_district || address.county,
+          address.city || address.town || address.municipality,
+          address.state
+        ].filter((part, index, parts) => part && parts.indexOf(part) === index);
+      }
+
+      function getAdministrativeNames(address) {
+        const city = address.city || address.town || address.municipality;
+        const district = address.city_district || address.county;
+        return {
+          ward: address.ward || address.village || address.suburb || address.quarter || address.neighbourhood,
+          city: city || district,
+          province: address.state
+        };
+      }
+
+      function normalizeAreaName(value) {
+        return String(value || '')
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .toLocaleLowerCase('vi')
+          .replace(/^(?:tinh|thanh pho|tp\.?|quan|huyen|thi xa|phuong|xa|thi tran)\s+/i, '')
+          .replace(/[^\p{L}\p{N}]+/gu, ' ')
+          .trim();
+      }
+
+      function administrativeQueries(names, level) {
+        const target = names[level];
+        if (!target) return [];
+        const hierarchy = level === 'ward'
+          ? [names.ward, names.city, names.province]
+          : level === 'city'
+            ? [names.city, names.province]
+            : [names.province];
+        const queries = [];
+        for (let start = 0; start < hierarchy.length; start += 1) {
+          const query = hierarchy.slice(start).filter(Boolean).join(', ');
+          if (query && !queries.includes(query)) queries.push(query);
+        }
+        if (level === 'ward') {
+          const district = pinnedAddress.city_district || pinnedAddress.county;
+          if (district && names.ward && names.province) {
+            const query = [names.ward, district, names.province].filter(Boolean).join(', ');
+            if (!queries.includes(query)) queries.splice(1, 0, query);
+          }
+        }
+        return queries;
+      }
+
+      function isMatchingArea(result, target) {
+        const normalizedTarget = normalizeAreaName(target);
+        const addressValues = Object.values(result.address || {}).map(normalizeAreaName);
+        const title = normalizeAreaName(result.name);
+        const displayName = normalizeAreaName(result.display_name);
+        return title === normalizedTarget ||
+          title.startsWith(`${normalizedTarget} `) ||
+          displayName === normalizedTarget ||
+          displayName.startsWith(`${normalizedTarget} `) ||
+          addressValues.includes(normalizedTarget);
+      }
+
+      async function findAdministrativeBoundary(names, level, requestId) {
+        const target = names[level];
+        const candidates = [];
+        for (const query of administrativeQueries(names, level)) {
+          const url = new URL('https://nominatim.openstreetmap.org/search');
+          url.search = new URLSearchParams({
+            q: `${query}, Việt Nam`,
+            format: 'jsonv2',
+            limit: '5',
+            addressdetails: '1',
+            polygon_geojson: '1',
+            countrycodes: 'vn',
+            'accept-language': 'vi'
+          }).toString();
+          const results = await requestNominatim(url, requestId, 'Không tải được ranh giới');
+          if (requestId !== selectionId) return null;
+          for (const result of results || []) {
+            const geometry = result.geojson;
+            if (
+              !geometry ||
+              !['Polygon', 'MultiPolygon'].includes(geometry.type) ||
+              !isMatchingArea(result, target)
+            ) continue;
+            const isBoundary = result.class === 'boundary' || result.type === 'administrative';
+            candidates.push({
+              result,
+              score: Number(isBoundary) * 10 +
+                Number(normalizeAreaName(result.name) === normalizeAreaName(target)) * 5
+            });
+          }
+          const boundaryMatch = candidates
+            .filter(candidate => candidate.result.class === 'boundary' || candidate.result.type === 'administrative')
+            .sort((first, second) => second.score - first.score)[0];
+          if (boundaryMatch) return boundaryMatch.result;
+        }
+        return candidates.sort((first, second) => second.score - first.score)[0]?.result || null;
+      }
+
+      async function reverseLookup(latitude, longitude, requestId) {
+        const url = new URL('https://nominatim.openstreetmap.org/reverse');
+        url.search = new URLSearchParams({
+          lat: String(latitude),
+          lon: String(longitude),
+          format: 'jsonv2',
+          addressdetails: '1',
+          zoom: '18',
+          'accept-language': 'vi'
+        }).toString();
+        const result = await requestNominatim(url, requestId, 'Không tìm được địa chỉ');
+        if (requestId !== selectionId || !result) return;
+        const address = result.address || {};
+        pinnedAddress = address;
+        const parts = addressParts(address);
+        const displayName = parts.length ? parts.join(', ') : result.display_name;
+        if (!assignedGeometryInput.value) {
+          areaInput.value = displayName || result.display_name || '';
+          assignedLatitudeInput.value = String(latitude);
+          assignedLongitudeInput.value = String(longitude);
+        }
+        pinnedMarker.setPopupContent(createPopup(latitude, longitude, displayName));
+        status.textContent = displayName
+          ? `Đã ghim: ${displayName}. Bấm vào ghim để chọn cấp khu vực.`
+          : 'Đã ghim vị trí. Bấm vào ghim để chọn cấp khu vực.';
+      }
+
+      async function selectAdministrativeArea(latitude, longitude, level) {
+        const requestId = selectionId;
+        try {
+          if (!pinnedAddress) {
+            throw new Error('Chưa xác định được địa chỉ hành chính của vị trí. Hãy ghim lại hoặc thử lại.');
+          }
+          if (requestId !== selectionId) return;
+
+          const names = getAdministrativeNames(pinnedAddress);
+          const target = names[level];
+          if (!target) {
+            const levelName = level === 'ward' ? 'phường/xã' : level === 'city' ? 'thành phố/quận/huyện' : 'tỉnh';
+            throw new Error(`Không tìm thấy tên ${levelName} tại vị trí này.`);
+          }
+          status.textContent = `Đang tìm ranh giới ${level === 'ward' ? 'phường/xã' : level === 'city' ? 'thành phố/quận/huyện' : 'tỉnh'} "${target}"...`;
+          const result = await findAdministrativeBoundary(names, level, requestId);
+          if (requestId !== selectionId) return;
+          if (!result) {
+            const levelName = level === 'ward' ? 'phường/xã' : level === 'city' ? 'thành phố/quận/huyện' : 'tỉnh';
+            throw new Error(`Chưa tìm thấy dữ liệu ranh giới ${levelName} "${target}". Hãy thử tìm theo tên địa chỉ hoặc ghim lại vị trí.`);
+          }
+          if (requestId !== selectionId) return;
+
+          const landMask = await getVietnamLandMask();
+          if (requestId !== selectionId) return;
+          const clippedArea = turf.intersect(turf.featureCollection([
+            turf.feature(result.geojson),
+            turf.feature(landMask)
+          ]));
+          if (!clippedArea || !isAreaGeometry(clippedArea.geometry)) {
+            throw new Error('Không tìm thấy phần ranh giới này trên đất liền Việt Nam.');
+          }
+          if (!isInsideVietnam(latitude, longitude, landMask) ||
+              !turf.booleanPointInPolygon(
+                turf.point([longitude, latitude]),
+                turf.feature(clippedArea.geometry)
+              )) {
+            throw new Error('Vị trí ghim không nằm trong ranh giới hành chính tìm được.');
+          }
+          const newBoundary = L.geoJSON(clippedArea.geometry, { style: redBoundaryStyle });
+          const bounds = newBoundary.getBounds();
+          if (!bounds.isValid()) throw new Error('Ranh giới khu vực không hợp lệ.');
+          if (selectedBoundary) map.removeLayer(selectedBoundary);
+          selectedBoundary = newBoundary.addTo(map);
+          if (assignedSelectionLayer) map.removeLayer(assignedSelectionLayer);
+          assignedSelectionLayer = selectedBoundary;
+          map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
+
+          const assignedArea = administrativeQueries(names, level)[0];
+          storeAssignedSelection(
+            assignedArea,
+            clippedArea.geometry,
+            latitude,
+            longitude
+          );
+          status.textContent = `Đã khoanh vùng màu đỏ: ${result.name || target}. Khu vực được thêm vào nội dung phân công.`;
+          pinnedMarker.openPopup();
+        } catch (error) {
+          console.error('Không thể khoanh vùng khu vực được phân công:', error);
+          status.textContent = error.message || 'Không thể tải ranh giới khu vực. Vui lòng thử lại.';
+        }
+      }
+
+      function setPinnedLocation(latitude, longitude, address, zoom = 14, searchResult = null) {
+        const requestId = ++selectionId;
+        const location = L.latLng(latitude, longitude);
+        if (selectedBoundary) {
+          map.removeLayer(selectedBoundary);
+          selectedBoundary = null;
+        }
+        if (pinnedMarker) map.removeLayer(pinnedMarker);
+        pinnedAddress = address || null;
+        if (assignedSelectionLayer) {
+          map.removeLayer(assignedSelectionLayer);
+          assignedSelectionLayer = null;
+        }
+        assignedGeometryInput.value = '';
+        assignedLatitudeInput.value = String(latitude);
+        assignedLongitudeInput.value = String(longitude);
+        if (searchResult?.display_name) {
+          areaInput.value = searchResult.display_name;
+        }
+        pinnedMarker = L.marker(location).addTo(map);
+        const addressText = searchResult?.display_name ||
+          addressParts(pinnedAddress || {}).join(', ') ||
+          'Đang tìm địa chỉ hành chính...';
+        pinnedMarker.bindPopup(createPopup(latitude, longitude, addressText), { autoPan: false }).openPopup();
+
+        const geometry = searchResult?.geojson;
+        let displayBounds;
+        if (geometry && ['Polygon', 'MultiPolygon'].includes(geometry.type)) {
+          const boundary = L.geoJSON(geometry, { style: redBoundaryStyle });
+          displayBounds = boundary.getBounds();
+          if (displayBounds.isValid()) selectedBoundary = boundary.addTo(map);
+        }
+        if (!displayBounds?.isValid() && Array.isArray(searchResult?.boundingbox)) {
+          const [south, north, west, east] = searchResult.boundingbox.map(Number);
+          if ([south, north, west, east].every(Number.isFinite)) {
+            const bounds = L.latLngBounds([south, west], [north, east]);
+            if (bounds.isValid()) displayBounds = bounds;
+          }
+        }
+        if (searchResult) {
+          map.flyTo(location, zoom, { duration: 0.8 });
+        } else if (displayBounds?.isValid()) {
+          map.flyToBounds(displayBounds, {
+            paddingTopLeft: [32, 82],
+            paddingBottomRight: [32, 32],
+            maxZoom: 16,
+            duration: 0.8
+          });
+        } else {
+          map.flyTo(location, zoom, { duration: 0.8 });
+        }
+        status.textContent = `Đã ghim: ${addressText}. Bấm vào ghim để chọn cấp khu vực.`;
+        if (selectedBoundary) {
+          status.textContent = `Đã ghim đúng kết quả tìm kiếm tại ${latitude.toFixed(6)}, ${longitude.toFixed(6)}.`;
+        } else if (displayBounds?.isValid()) {
+          status.textContent = `Đã tìm thấy vị trí: ${addressText}. Bản đồ đã căn chỉnh để hiển thị toàn bộ khu vực.`;
+        }
+        if (!pinnedAddress) {
+          void reverseLookup(latitude, longitude, requestId).catch(error => {
+            if (requestId !== selectionId) return;
+            console.error('Không thể xác định địa chỉ tại vị trí đã tìm:', error);
+            status.textContent = error.message || 'Không thể xác định địa chỉ tại vị trí này.';
+          });
+        }
+        return requestId;
+      }
+
+      function isVietnamSearchResult(result, landMask) {
+        const latitude = Number(result.lat);
+        const longitude = Number(result.lon);
+        const countryCode = String(result.address?.country_code || '').toLowerCase();
+        return Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          latitude >= 6 && latitude <= 24 &&
+          longitude >= 101 && longitude <= 118 &&
+          (!countryCode || countryCode === 'vn') &&
+          isInsideVietnam(latitude, longitude, landMask);
+      }
+
+      function showSearchMessage(message) {
+        searchResults.replaceChildren();
+        const text = document.createElement('p');
+        text.className = 'assigned-area-search-info';
+        text.textContent = message;
+        searchResults.append(text);
+        searchResults.classList.add('open');
+      }
+
+      function parseVietnamCoordinates(query) {
+        const match = query.match(/^\s*\(?\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*[,;\s]\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*\)?\s*$/);
+        if (!match) return null;
+        const latitude = Number(match[1]);
+        const longitude = Number(match[2]);
+        if (latitude < 7 || latitude > 24 || longitude < 101 || longitude > 118) {
+          throw new Error('Tọa độ nằm ngoài phạm vi Việt Nam.');
+        }
+        return { latitude, longitude };
+      }
+
+      async function searchAddress() {
+        const query = searchInput.value.trim();
+        if (!query) {
+          showSearchMessage('Nhập địa chỉ cần tìm trên bản đồ.');
+          searchInput.focus();
+          return;
+        }
+        const requestId = ++selectionId;
+        searchResults.replaceChildren();
+        showSearchMessage('Đang tìm địa chỉ...');
+        searchResults.classList.add('open');
+        try {
+          const coordinates = parseVietnamCoordinates(query);
+          if (coordinates) {
+            setPinnedLocation(coordinates.latitude, coordinates.longitude, null, 15);
+            searchResults.classList.remove('open');
+            return;
+          }
+        } catch (error) {
+          showSearchMessage(error.message);
+          return;
+        }
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.search = new URLSearchParams({
+          q: query,
+          format: 'jsonv2',
+          limit: '10',
+          polygon_geojson: '1',
+          countrycodes: 'vn',
+          'accept-language': 'vi'
+        }).toString();
+        try {
+          const results = await requestNominatim(url, requestId, 'Không tìm được địa chỉ');
+          if (requestId !== selectionId) return;
+          if (!results?.length) {
+            showSearchMessage('Không tìm thấy địa chỉ. Hãy thử thêm tên phường, thành phố hoặc tỉnh.');
+            return;
+          }
+          const landMask = await getVietnamLandMask();
+          if (requestId !== selectionId) return;
+          const usableResults = results.filter(result => isVietnamSearchResult(result, landMask));
+          if (!usableResults.length) {
+            showSearchMessage('Không tìm thấy kết quả ở Việt Nam. Hãy nhập thêm tên tỉnh/thành hoặc thử cách viết khác.');
+            return;
+          }
+          usableResults.forEach(result => {
+            const latitude = Number(result.lat);
+            const longitude = Number(result.lon);
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'assigned-area-search-result';
+            option.setAttribute('role', 'option');
+            option.textContent = result.display_name || result.name || `${latitude}, ${longitude}`;
+            option.addEventListener('click', async () => {
+              const selectionIdForResult = ++selectionId;
+              searchResults.replaceChildren();
+              status.textContent = 'Đang kiểm tra vị trí và ghim địa chỉ...';
+              try {
+                const selectedLandMask = await getVietnamLandMask();
+                if (selectionIdForResult !== selectionId) return;
+                if (!isVietnamSearchResult(result, selectedLandMask)) {
+                  status.textContent = 'Địa chỉ này không nằm trong lãnh thổ Việt Nam nên không thể ghim.';
+                  return;
+                }
+                const pinnedRequestId = setPinnedLocation(latitude, longitude, result.address || null, 15, {
+                  ...result,
+                  display_name: result.display_name || result.name || query
+                });
+                if (isAreaGeometry(result.geojson)) {
+                  const landArea = turf.intersect(turf.featureCollection([
+                    turf.feature(result.geojson),
+                    turf.feature(selectedLandMask)
+                  ]));
+                  if (pinnedRequestId !== selectionId) return;
+                  if (landArea && isAreaGeometry(landArea.geometry)) {
+                    const boundary = L.geoJSON(landArea, { style: redBoundaryStyle });
+                    if (selectedBoundary) map.removeLayer(selectedBoundary);
+                    selectedBoundary = boundary.addTo(map);
+                  }
+                }
+                searchInput.value = result.display_name || result.name || query;
+                searchResults.classList.remove('open');
+                status.textContent = `Đã ghim đúng kết quả tìm kiếm: ${result.display_name || result.name}.`;
+              } catch (error) {
+                if (selectionIdForResult !== selectionId) return;
+                console.error('Không thể xác nhận hoặc hiển thị khu vực địa chỉ:', error);
+                status.textContent = error.message || 'Không thể xác nhận vị trí. Vui lòng thử lại.';
+              }
+            });
+            searchResults.append(option);
+          });
+          const credit = document.createElement('div');
+          credit.className = 'assigned-area-search-credit';
+          credit.textContent = 'Kết quả từ OpenStreetMap / Nominatim';
+          searchResults.append(credit);
+          status.textContent = 'Chọn một kết quả để ghim vị trí, hoặc bấm trực tiếp vào bản đồ.';
+          searchResults.classList.add('open');
+        } catch (error) {
+          if (requestId !== selectionId) return;
+          console.error('Không thể tìm địa chỉ trên bản đồ:', error);
+          showSearchMessage(error.message || 'Không thể tìm địa chỉ. Vui lòng thử lại.');
+        }
+      }
+
+      searchInput.addEventListener('input', () => searchResults.classList.remove('open'));
+      document.addEventListener('click', event => {
+        if (!event.target.closest('.assigned-area-search-control')) {
+          searchResults.classList.remove('open');
+        }
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') searchResults.classList.remove('open');
+      });
+
+      map.on('click', event => {
+        const { lat, lng } = event.latlng;
+        searchResults.replaceChildren();
+        setPinnedLocation(lat, lng, null, map.getZoom());
+      });
+
+      window.setTimeout(() => map.invalidateSize(), 0);
+    })();
+  </script>
+  <% } %>
+</body>
+</html>

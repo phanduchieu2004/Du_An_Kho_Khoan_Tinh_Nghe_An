@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root { color-scheme: light; --ink: #1f302d; --muted: #667772; --line: #dce5e1; --green: #17785f; }
+    body { margin: 0; background: #f3f6f4; color: var(--ink); font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1500px; margin: 0 auto; padding: 28px 24px 48px; }
+    .page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+    h1 { margin: 0 0 5px; font-size: 26px; }
+    .intro, .muted { margin: 0; color: var(--muted); }
+    .table-frame { overflow: auto; border: 1px solid var(--line); background: white; }
+    table { margin: 0 !important; white-space: nowrap; }
+    thead th { position: sticky; top: 0; z-index: 1; background: #e9f0ed !important; color: #344b44; }
+    tbody td { vertical-align: middle; }
+    .engineer-name { font-weight: 700; }
+    .area-cell { min-width: 260px; max-width: 420px; white-space: normal; }
+    .empty { padding: 32px !important; text-align: center; color: var(--muted); }
+    dialog { width: min(1050px, calc(100% - 24px)); max-height: calc(100vh - 28px); overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); box-shadow: 0 18px 55px #19332e38; }
+    dialog::backdrop { background: #10251f80; }
+    dialog h2 { margin: 0 0 8px; font-size: 22px; }
+    .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .project-picker { max-height: 320px; overflow: auto; border: 1px solid var(--line); background: white; }
+    .project-picker table { white-space: normal; }
+    .project-picker th { position: sticky; top: 0; }
+    .project-picker input[type="date"] { min-width: 140px; }
+    .dialog-table-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #f8faf9; }
+    .dialog-table-filter label { display: grid; gap: 4px; margin: 0; color: #52645e; font-size: 12px; font-weight: 600; }
+    .dialog-table-filter input, .dialog-table-filter select { min-height: 36px; padding: 6px 9px; border: 1px solid #cfdad5; border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
+    .dialog-table-filter .filter-search { flex: 1 1 240px; }
+    .dialog-table-filter .filter-period, .dialog-table-filter .filter-date { flex: 0 1 160px; }
+    .dialog-filter-count { padding: 0 2px 8px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 600px) { .dialog-table-filter .filter-search { flex-basis: 100%; } .dialog-table-filter .filter-period, .dialog-table-filter .filter-date { flex: 1 1 130px; } }
+    #previewMap { height: 360px; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; }
+    #allocationMessage, #assignmentMessage { min-height: 1.5em; margin: 12px 0 0; color: #a3312b; font-size: 14px; }
+    .success { color: #17785f !important; }
+    .dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .summary-pill { display: inline-block; padding: 5px 9px; border-radius: 20px; background: #e8f2ee; color: #23624e; font-size: 12px; }
+    @media (max-width: 760px) {
+      main { padding: 22px 12px 36px; }
+      dialog { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <main>
+    <div class="page-heading">
+      <div>
+        <h1><%= title %></h1>
+        <p class="intro">Chọn kỹ sư, công trình và thời hạn. Bản đồ khu vực sẽ tự xem trước theo tọa độ công trình; bạn chỉ cần xác nhận để lưu phân bổ.</p>
+      </div>
+    </div>
+    <div class="table-frame">
+      <table class="table table-hover table-striped table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>Họ tên kỹ sư</th>
+            <th class="text-center">Đang đảm nhiệm</th>
+            <th class="text-center">Đã hoàn thành</th>
+            <th class="text-center">Mức độ hoàn thành</th>
+            <th class="text-center">Trạng thái phân bổ</th>
+            <th>Khu vực hiện tại</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (engineers.length === 0) { %>
+            <tr><td class="empty" colspan="7">Không có kỹ sư đang được cấp quyền đăng nhập.</td></tr>
+          <% } else { %>
+            <% engineers.forEach((engineer) => { %>
+              <tr>
+                <td>
+                  <div class="engineer-name"><%= engineer.ho_ten || engineer.ten_dang_nhap %></div>
+                  <small class="muted">@<%= engineer.ten_dang_nhap %></small>
+                </td>
+                <td class="text-center"><span class="summary-pill"><%= engineer.assigned_count %></span></td>
+                <td class="text-center"><span class="summary-pill"><%= engineer.completed_count %></span></td>
+                <td class="text-center">
+                  <div class="progress" role="progressbar" aria-label="Mức độ hoàn thành" aria-valuenow="<%= engineer.completion_rate %>" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar bg-success" style="width: <%= engineer.completion_rate %>%"><%= engineer.completion_rate %>%</div>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="summary-pill"><%= engineer.allocation_status === 'da_phan_bo' ? 'Đã phân bổ' : 'Chưa phân bổ' %></span>
+                </td>
+                <td class="area-cell"><%= engineer.current_area || 'Chưa phân công' %></td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary appoint-engineer" type="button" data-engineer-id="<%= engineer.ma_nguoi_dung %>" data-engineer-name="<%= engineer.ho_ten || engineer.ten_dang_nhap %>">Bổ nhiệm</button>
+                    <button class="btn btn-sm btn-outline-secondary view-assignments" type="button" data-engineer-id="<%= engineer.ma_nguoi_dung %>" data-engineer-name="<%= engineer.ho_ten || engineer.ten_dang_nhap %>">Tiến độ</button>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="allocationDialog" aria-labelledby="allocationTitle">
+    <div class="dialog-head">
+      <div>
+        <h2 id="allocationTitle">Bổ nhiệm công trình</h2>
+        <p class="muted">Kỹ sư: <strong id="selectedEngineerName"></strong></p>
+      </div>
+      <button class="btn-close" type="button" id="closeAllocation" aria-label="Đóng"></button>
+    </div>
+    <p><label><input id="selectAllProjects" type="checkbox"> Chọn tất cả công trình</label></p>
+    <div data-dialog-filter-host="allocation"></div>
+    <div>
+      <div class="nav nav-tabs mb-3" role="tablist" aria-label="Lọc công trình theo trạng thái">
+        <% projectTabs.forEach((tab, index) => { %>
+          <button class="nav-link<%= index === 0 ? ' active' : '' %>" id="project-<%= tab.id %>-tab" type="button" role="tab" aria-controls="project-<%= tab.id %>-panel" aria-selected="<%= index === 0 ? 'true' : 'false' %>">
+            <%= tab.label %> (<%= tab.projects.length %>)
+          </button>
+        <% }); %>
+      </div>
+      <% projectTabs.forEach((tab, index) => { %>
+        <div class="project-tab-panel<%= index === 0 ? ' active' : '' %>" id="project-<%= tab.id %>-panel" role="tabpanel" aria-labelledby="project-<%= tab.id %>-tab" <%= index === 0 ? '' : 'hidden' %>>
+          <div class="project-picker">
+            <table class="table table-sm table-striped table-bordered align-middle">
+              <thead>
+                <tr>
+                  <th><%= tab.id === 'unassigned' ? 'Chọn' : 'Trạng thái' %></th>
+                  <th>Công trình</th><th>Địa điểm</th><th>Người đảm nhiệm</th><th>Thời hạn</th>
+                  <% if (tab.id === 'unassigned') { %><th>Ngày bắt đầu</th><th>Ngày kết thúc</th><% } %>
+                </tr>
+              </thead>
+              <tbody>
+                <% tab.projects.forEach((project) => { %>
+                  <tr>
+                    <td>
+                      <% if (tab.id === 'unassigned') { %>
+                        <input class="allocation-project" type="checkbox" value="<%= project.project.id %>" aria-label="Chọn <%= project.project.ten_cong_trinh || project.project.id %>">
+                      <% } else if (tab.id === 'overdue') { %>
+                        Đã quá hạn
+                      <% } else if (tab.id === 'pending-cancellation') { %>
+                        Đang chờ xử lý đơn hủy
+                      <% } else { %>
+                        Đã phân công
+                      <% } %>
+                    </td>
+                    <td><%= project.project.ten_cong_trinh || `Công trình ${project.project.id}` %></td>
+                    <td><%= project.project.dia_diem || '—' %></td>
+                    <td><%= project.allocation ? (project.allocation.engineer_name || project.allocation.engineer_username) : '—' %></td>
+                    <td><%= project.allocation ? `${project.allocation.tu_ngay || '—'} – ${project.allocation.den_ngay || '—'}` : '—' %></td>
+                    <% if (tab.id === 'unassigned') { %>
+                      <td><input class="form-control form-control-sm project-start" type="date" aria-label="Ngày bắt đầu bổ nhiệm"></td>
+                      <td><input class="form-control form-control-sm project-end" type="date" aria-label="Ngày kết thúc bổ nhiệm"></td>
+                    <% } %>
+                  </tr>
+                <% }); %>
+                <% if (tab.projects.length === 0) { %>
+                  <tr><td class="empty" colspan="<%= tab.id === 'unassigned' ? 7 : 5 %>">Không có công trình thuộc trạng thái này.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+    <div id="previewSection" hidden>
+      <h3 class="h6 mt-3">Khu vực sẽ được khoanh đỏ</h3>
+      <p id="previewSummary" class="muted"></p>
+      <div id="previewMap" role="img" aria-label="Bản đồ khu vực công trình được chọn"></div>
+    </div>
+    <p id="allocationMessage" role="status" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button class="btn btn-outline-secondary" type="button" id="cancelAllocation">Hủy</button>
+      <button class="btn btn-outline-primary" type="button" id="previewAllocation" disabled>Xem trước lại</button>
+      <button class="btn btn-success" type="button" id="confirmAllocation" disabled>Xác nhận bổ nhiệm</button>
+    </div>
+  </dialog>
+
+  <dialog id="progressDialog" aria-labelledby="progressTitle">
+    <div class="dialog-head">
+      <div><h2 id="progressTitle">Tiến độ bổ nhiệm</h2><p class="muted" id="progressEngineer"></p></div>
+      <button class="btn-close" type="button" id="closeProgress" aria-label="Đóng"></button>
+    </div>
+    <div data-dialog-filter-host="progress"></div>
+    <div id="assignmentList" class="table-frame"></div>
+    <p id="assignmentMessage" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const projectRows = Array.from(document.querySelectorAll('.allocation-project'));
+    const normalizeFilterText = (value) => value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .toLocaleLowerCase('vi')
+      .trim();
+
+    function attachDialogTableFilter(host, dialog) {
+      host.innerHTML = `
+        <section class="dialog-table-filter" aria-label="Tìm kiếm và lọc bảng">
+          <label class="filter-search">
+            <span>Tìm kiếm</span>
+            <input type="search" data-dialog-search placeholder="Nhập nội dung cần tìm..." autocomplete="off">
+          </label>
+          <label class="filter-period">
+            <span>Lọc theo</span>
+            <select data-dialog-period>
+              <option value="day">Ngày</option>
+              <option value="month">Tháng</option>
+              <option value="year">Năm</option>
+            </select>
+          </label>
+          <label class="filter-date">
+            <span data-dialog-date-caption>Chọn ngày</span>
+            <input type="date" data-dialog-date>
+            <input type="month" data-dialog-month hidden>
+            <input type="number" data-dialog-year min="1900" max="2200" step="1" placeholder="Năm" hidden>
+          </label>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-dialog-reset>Xóa bộ lọc</button>
+          ${host.dataset.dialogFilterHost === 'allocation'
+            ? '<button class="btn btn-sm btn-outline-primary" type="button" data-address-priority aria-pressed="false" disabled>Ưu tiên địa chỉ gần nhất</button>'
+            : ''}
+          <span class="dialog-filter-count" data-dialog-count aria-live="polite"></span>
+        </section>
+      `;
+      const search = host.querySelector('[data-dialog-search]');
+      const period = host.querySelector('[data-dialog-period]');
+      const date = host.querySelector('[data-dialog-date]');
+      const month = host.querySelector('[data-dialog-month]');
+      const year = host.querySelector('[data-dialog-year]');
+      const caption = host.querySelector('[data-dialog-date-caption]');
+      const count = host.querySelector('[data-dialog-count]');
+      const controls = { day: date, month, year };
+
+      function applyFilters() {
+        const query = normalizeFilterText(search.value);
+        const selectedPeriod = period.value;
+        const selectedValue = controls[selectedPeriod].value;
+        let visible = 0;
+        let total = 0;
+        dialog.querySelectorAll('tbody tr').forEach((row) => {
+          if (row.querySelector('.empty')) {
+            row.hidden = Boolean(query || selectedValue);
+            return;
+          }
+          total += 1;
+          const text = row.innerText || row.textContent || '';
+          const matchesText = !query || normalizeFilterText(text).includes(query);
+          const dates = [];
+          for (const match of text.matchAll(/(^|[^\d])(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/g)) {
+            dates.push({
+              year: Number(match[2]),
+              month: Number(match[3]),
+              day: Number(match[4]),
+            });
+          }
+          for (const match of text.matchAll(/(^|[^\d])(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})(?!\d)/g)) {
+            const parsedYear = Number(match[4]);
+            dates.push({
+              year: parsedYear < 100 ? 2000 + parsedYear : parsedYear,
+              month: Number(match[3]),
+              day: Number(match[2]),
+            });
+          }
+          let matchesDate = !selectedValue;
+          if (selectedValue && selectedPeriod === 'year') {
+            matchesDate = dates.some((item) => item.year === Number(selectedValue));
+          } else if (selectedValue) {
+            const [selectedYear, selectedMonth, selectedDay] = selectedValue.split('-').map(Number);
+            matchesDate = dates.some((item) =>
+              item.year === selectedYear &&
+              item.month === selectedMonth &&
+              (selectedPeriod === 'month' || item.day === selectedDay)
+            );
+          }
+          row.hidden = !(matchesText && matchesDate);
+          if (!row.hidden) visible += 1;
+        });
+        count.textContent = `Hiển thị ${visible}/${total} dòng`;
+      }
+
+      function updateDateControl() {
+        const selectedPeriod = period.value;
+        for (const [name, input] of Object.entries(controls)) {
+          input.hidden = name !== selectedPeriod;
+          if (name !== selectedPeriod) input.value = '';
+        }
+        caption.textContent =
+          selectedPeriod === 'day' ? 'Chọn ngày' :
+            selectedPeriod === 'month' ? 'Chọn tháng' : 'Chọn năm';
+        applyFilters();
+      }
+
+      search.addEventListener('input', applyFilters);
+      period.addEventListener('change', updateDateControl);
+      Object.values(controls).forEach((input) => {
+        input.addEventListener('input', applyFilters);
+        input.addEventListener('change', applyFilters);
+      });
+      host.querySelector('[data-dialog-reset]').addEventListener('click', () => {
+        search.value = '';
+        period.value = 'day';
+        date.value = '';
+        month.value = '';
+        year.value = '';
+        updateDateControl();
+      });
+      return applyFilters;
+    }
+
+    const applyAllocationFilters = attachDialogTableFilter(
+      document.querySelector('[data-dialog-filter-host="allocation"]'),
+      document.getElementById('allocationDialog'),
+    );
+    const applyProgressFilters = attachDialogTableFilter(
+      document.querySelector('[data-dialog-filter-host="progress"]'),
+      document.getElementById('progressDialog'),
+    );
+    const addressPriorityButton = document.querySelector('[data-address-priority]');
+    let activeAssignmentAddresses = [];
+    let addressPriorityEnabled = false;
+    let originalProjectOrder = new WeakMap();
+    applyAllocationFilters();
+    applyProgressFilters();
+
+    function normalizeAddress(value) {
+      return normalizeFilterText(value)
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .split(/\s+/)
+        .filter((token) =>
+          token.length > 1 &&
+          ![
+            'viet', 'nam', 'tinh', 'thanh', 'pho', 'phuong', 'xa',
+            'huyen', 'quan', 'thi', 'tran', 'thi', 'xa',
+          ].includes(token)
+        );
+    }
+
+    function addressSimilarity(address, referenceAddresses) {
+      const candidate = new Set(normalizeAddress(address));
+      if (candidate.size === 0 || referenceAddresses.length === 0) return 0;
+      let highestScore = 0;
+      for (const reference of referenceAddresses) {
+        const tokens = new Set(normalizeAddress(reference));
+        if (tokens.size === 0) continue;
+        const shared = [...candidate].filter((token) => tokens.has(token)).length;
+        const score = shared / (candidate.size + tokens.size - shared);
+        highestScore = Math.max(highestScore, score);
+      }
+      return highestScore;
+    }
+
+    function sortProjectRowsByAddress() {
+      const panel = document.querySelector(
+        '#allocationDialog .project-tab-panel:not([hidden])',
+      );
+      if (!panel) return;
+      const table = panel.querySelector('table');
+      const body = table?.tBodies[0];
+      if (!body) return;
+      if (!originalProjectOrder.has(body)) {
+        originalProjectOrder.set(body, [...body.rows]);
+      }
+      const sourceRows = originalProjectOrder.get(body);
+      const projectRowsInTable = sourceRows.filter((row) => !row.querySelector('.empty'));
+      const emptyRows = sourceRows.filter((row) => row.querySelector('.empty'));
+      if (addressPriorityEnabled) {
+        projectRowsInTable.sort((left, right) => {
+          const leftAddress = left.cells[2]?.textContent || '';
+          const rightAddress = right.cells[2]?.textContent || '';
+          return addressSimilarity(rightAddress, activeAssignmentAddresses) -
+            addressSimilarity(leftAddress, activeAssignmentAddresses);
+        });
+      }
+      body.replaceChildren(...projectRowsInTable, ...emptyRows);
+      applyAllocationFilters();
+    }
+
+    addressPriorityButton.addEventListener('click', () => {
+      addressPriorityEnabled = !addressPriorityEnabled;
+      addressPriorityButton.setAttribute(
+        'aria-pressed',
+        String(addressPriorityEnabled),
+      );
+      addressPriorityButton.classList.toggle(
+        'btn-primary',
+        addressPriorityEnabled,
+      );
+      addressPriorityButton.classList.toggle(
+        'btn-outline-primary',
+        !addressPriorityEnabled,
+      );
+      addressPriorityButton.textContent = addressPriorityEnabled
+        ? 'Tắt ưu tiên địa chỉ'
+        : 'Ưu tiên địa chỉ gần nhất';
+      sortProjectRowsByAddress();
+    });
+
+    const projectTabList = document.querySelector('#allocationDialog [role="tablist"]');
+    projectTabList.querySelectorAll('[role="tab"]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        projectTabList.querySelectorAll('[role="tab"]').forEach((item) => {
+          item.classList.remove('active');
+          item.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('#allocationDialog [role="tabpanel"]').forEach((panel) => {
+          panel.classList.remove('active');
+          panel.hidden = true;
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        const panel = document.getElementById(tab.getAttribute('aria-controls'));
+        panel.classList.add('active');
+        panel.hidden = false;
+        sortProjectRowsByAddress();
+      });
+    });
+    const allocationDialog = document.getElementById('allocationDialog');
+    const allocationMessage = document.getElementById('allocationMessage');
+    const previewButton = document.getElementById('previewAllocation');
+    const confirmButton = document.getElementById('confirmAllocation');
+    let selectedEngineerId = null;
+    let previewData = null;
+    let previewMap = null;
+    let previewLayer = null;
+    let previewMarkers = null;
+    let previewRequestId = 0;
+    let allocationSaving = false;
+
+    function selectedProjects() {
+      return projectRows.filter((input) => input.checked).map((input) => {
+        const row = input.closest('tr');
+        return {
+          projectId: Number(input.value),
+          startDate: row.querySelector('.project-start').value,
+          endDate: row.querySelector('.project-end').value
+        };
+      });
+    }
+
+    function normalizeProjectCoordinates(project) {
+      let latitude = Number(project.latitude);
+      let longitude = Number(project.longitude);
+      if (latitude >= 101 && latitude <= 118 && longitude >= 6 && longitude <= 24) {
+        [latitude, longitude] = [longitude, latitude];
+      }
+      if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        throw new Error(`Tọa độ mặt bằng của ${project.ten_cong_trinh || `công trình ${project.id}`} không hợp lệ.`);
+      }
+      return { ...project, latitude, longitude };
+    }
+
+    function pointInRing(longitude, latitude, ring) {
+      let inside = false;
+      for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+        const [x1, y1] = ring[index];
+        const [x2, y2] = ring[previous];
+        if ((y1 > latitude) !== (y2 > latitude) &&
+          longitude < ((x2 - x1) * (latitude - y1)) / (y2 - y1) + x1) inside = !inside;
+      }
+      return inside;
+    }
+
+    function geometryContainsPoint(geometry, latitude, longitude) {
+      if (!geometry || !Array.isArray(geometry.coordinates)) return false;
+      const polygons = geometry.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+      return polygons.some((polygon) =>
+        Array.isArray(polygon) &&
+        Array.isArray(polygon[0]) &&
+        pointInRing(longitude, latitude, polygon[0]) &&
+        !polygon.slice(1).some((hole) => pointInRing(longitude, latitude, hole))
+      );
+    }
+
+    async function findProjectArea(project) {
+      const reverseUrl = new URL('https://nominatim.openstreetmap.org/reverse');
+      reverseUrl.search = new URLSearchParams({
+        lat: String(project.lookupLatitude),
+        lon: String(project.lookupLongitude),
+        format: 'jsonv2',
+        addressdetails: '1',
+        'accept-language': 'vi'
+      }).toString();
+      const reverseResponse = await fetch(reverseUrl, { signal: AbortSignal.timeout(12000) });
+      if (!reverseResponse.ok) throw new Error(`Không tra được địa chỉ tọa độ (HTTP ${reverseResponse.status}).`);
+      const address = (await reverseResponse.json()).address || {};
+      const pick = (...keys) => keys.map((key) => address[key]).find((value) => typeof value === 'string' && value.trim()) || '';
+      const ward = pick('ward', 'village', 'suburb', 'quarter', 'neighbourhood');
+      const district = pick('city_district', 'county', 'district');
+      const city = pick('city', 'town', 'municipality');
+      const province = pick('state');
+      const queries = [...new Set([
+        [ward, district, city, province],
+        [ward, city, province],
+        [city || district, province],
+        project.dia_diem ? [project.dia_diem, city, province] : []
+      ].map((parts) => parts.filter(Boolean).filter((part, index, all) => all.indexOf(part) === index).join(', '))
+        .filter(Boolean))];
+      let lastError;
+      for (const query of queries) {
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.search = new URLSearchParams({
+          q: `${query}, Việt Nam`,
+          format: 'jsonv2',
+          limit: '10',
+          addressdetails: '1',
+          polygon_geojson: '1',
+          countrycodes: 'vn',
+          'accept-language': 'vi'
+        }).toString();
+        try {
+          const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
+          if (!response.ok) throw new Error(`Không tra được ranh giới "${query}" (HTTP ${response.status}).`);
+          const results = await response.json();
+          const match = results
+            .filter((result) =>
+              (result.class === 'boundary' || result.type === 'administrative') &&
+              geometryContainsPoint(result.geojson, project.lookupLatitude, project.lookupLongitude)
+            )
+            .sort((a, b) => {
+              const area = (result) => {
+                const box = result.boundingbox?.map(Number);
+                return box?.length === 4 ? (box[1] - box[0]) * (box[3] - box[2]) : Infinity;
+              };
+              return area(a) - area(b);
+            })[0];
+          if (match) {
+            return {
+              projectId: project.id,
+              name: [ward, district, city, province].filter(Boolean).join(', ') || match.name || query,
+              geometry: match.geojson
+            };
+          }
+        } catch (error) {
+          lastError = error;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1100));
+      }
+      throw lastError instanceof Error
+        ? lastError
+        : new Error(`Không tìm thấy ranh giới hành chính bao quanh ${project.ten_cong_trinh || `công trình ${project.id}`} (${project.latitude}, ${project.longitude}).`);
+    }
+
+    function validateSelection() {
+      const assignments = selectedProjects();
+      if (assignments.length === 0 || assignments.length > 20) {
+        throw new Error('Hãy chọn từ 1 đến 20 công trình.');
+      }
+      if (assignments.some((item) => !item.startDate || !item.endDate || item.startDate > item.endDate)) {
+        throw new Error('Nhập ngày bắt đầu và ngày kết thúc hợp lệ cho từng công trình đã chọn.');
+      }
+      return assignments;
+    }
+
+    function invalidatePreview() {
+      previewRequestId += 1;
+      previewData = null;
+      confirmButton.disabled = true;
+      document.getElementById('previewSection').hidden = true;
+      if (!allocationSaving) previewButton.disabled = !hasValidSelection();
+    }
+
+    function hasValidSelection() {
+      try {
+        validateSelection();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function schedulePreview() {
+      invalidatePreview();
+      allocationMessage.classList.remove('success');
+      const assignments = selectedProjects();
+      if (assignments.length === 0) {
+        allocationMessage.textContent = '';
+        return;
+      }
+      try {
+        validateSelection();
+      } catch (error) {
+        allocationMessage.textContent = error instanceof Error
+          ? error.message
+          : 'Kiểm tra công trình và thời hạn đã chọn.';
+        return;
+      }
+      allocationMessage.textContent = 'Đã đủ công trình và thời hạn. Bấm “Xem trước lại” để mở bản đồ.';
+    }
+
+    document.getElementById('selectAllProjects').addEventListener('change', (event) => {
+      projectRows.forEach((input) => { input.checked = event.target.checked; });
+      schedulePreview();
+    });
+    projectRows.forEach((input) => input.addEventListener('change', schedulePreview));
+    document.querySelectorAll('.project-start, .project-end').forEach((input) => {
+      input.addEventListener('input', schedulePreview);
+      input.addEventListener('change', schedulePreview);
+    });
+
+    document.querySelectorAll('.appoint-engineer').forEach((button) => {
+      button.addEventListener('click', async () => {
+        selectedEngineerId = Number(button.dataset.engineerId);
+        document.getElementById('selectedEngineerName').textContent = button.dataset.engineerName;
+        allocationMessage.textContent = '';
+        allocationMessage.classList.remove('success');
+        addressPriorityEnabled = false;
+        addressPriorityButton.disabled = true;
+        addressPriorityButton.textContent = 'Đang tải địa chỉ phân công...';
+        addressPriorityButton.setAttribute('aria-pressed', 'false');
+        addressPriorityButton.classList.remove('btn-primary');
+        addressPriorityButton.classList.add('btn-outline-primary');
+        activeAssignmentAddresses = [];
+        originalProjectOrder = new WeakMap();
+        sortProjectRowsByAddress();
+        allocationDialog.showModal();
+        try {
+          const response = await fetch(
+            `/cong-trinh/phan-bo/ky-su/${selectedEngineerId}`,
+          );
+          const assignments = await response.json();
+          if (!response.ok) {
+            throw new Error(assignments.message || 'Không thể tải địa chỉ phân công hiện tại.');
+          }
+          activeAssignmentAddresses = assignments
+            .filter((assignment) =>
+              assignment.dang_hieu_luc &&
+              !assignment.da_hoan_thanh &&
+              assignment.cancellation_status !== 'da_duyet'
+            )
+            .flatMap((assignment) => [
+              assignment.khu_vuc,
+              assignment.dia_diem,
+            ])
+            .filter((address) => typeof address === 'string' && address.trim());
+          addressPriorityButton.disabled = activeAssignmentAddresses.length === 0;
+          addressPriorityButton.textContent = activeAssignmentAddresses.length > 0
+            ? 'Ưu tiên địa chỉ gần nhất'
+            : 'Kỹ sư chưa có địa chỉ phân công';
+        } catch (error) {
+          addressPriorityButton.disabled = true;
+          addressPriorityButton.textContent = 'Không tải được địa chỉ phân công';
+          allocationMessage.textContent = error instanceof Error
+            ? error.message
+            : 'Không thể tải địa chỉ phân công hiện tại.';
+        }
+      });
+    });
+
+    async function showAllocationPreview() {
+      const requestId = ++previewRequestId;
+      allocationMessage.classList.remove('success');
+      try {
+        const assignments = validateSelection();
+        previewButton.disabled = true;
+        allocationMessage.textContent = 'Đang xác định khu vực theo tọa độ mặt bằng...';
+        const response = await fetch('/cong-trinh/phan-bo/xem-truoc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectIds: assignments.map((item) => item.projectId) })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || `Không thể lấy tọa độ mặt bằng (HTTP ${response.status}).`);
+        if (requestId !== previewRequestId) return;
+        if (!Array.isArray(result.projects) || result.projects.length === 0) {
+          throw new Error('Không có tọa độ mặt bằng hợp lệ để hiển thị.');
+        }
+        const previewProjects = result.projects.map(normalizeProjectCoordinates);
+        allocationMessage.textContent = 'Đã lấy tọa độ mặt bằng. Đang tìm ranh giới hành chính trên bản đồ...';
+        const resolvedAreas = [];
+        for (const project of previewProjects) {
+          resolvedAreas.push(await findProjectArea(project));
+          if (requestId !== previewRequestId) return;
+        }
+        result.geometry = resolvedAreas.length === 1
+          ? resolvedAreas[0].geometry
+          : {
+            type: 'MultiPolygon',
+            coordinates: resolvedAreas.flatMap((area) =>
+              area.geometry.type === 'Polygon' ? [area.geometry.coordinates] : area.geometry.coordinates
+            )
+          };
+        result.areaNames = [...new Set(resolvedAreas.map((area) => area.name))];
+        result.resolvedAreas = resolvedAreas;
+        previewData = result;
+        document.getElementById('previewSummary').textContent =
+          `${previewProjects.length} công trình; khu vực: ${result.areaNames.join('; ')}. Ghim mặt bằng đầu tiên theo vĩ độ, kinh độ: ${previewProjects[0].latitude}, ${previewProjects[0].longitude}.`;
+        document.getElementById('previewSection').hidden = false;
+        if (!previewMap) {
+          previewMap = L.map('previewMap');
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+          }).addTo(previewMap);
+          previewMarkers = L.layerGroup().addTo(previewMap);
+        }
+        if (previewLayer) previewMap.removeLayer(previewLayer);
+        previewLayer = L.geoJSON(result.geometry, {
+          style: { color: '#dc2626', weight: 3, fillColor: '#ef4444', fillOpacity: 0.12 }
+        }).addTo(previewMap);
+        previewMarkers.clearLayers();
+        previewProjects.forEach((project, index) => {
+          const marker = index === 0
+            ? L.marker([project.latitude, project.longitude])
+            : L.circleMarker([project.latitude, project.longitude], {
+              radius: 6, color: '#b91c1c', fillColor: '#ef4444', fillOpacity: 1
+            });
+          marker.bindPopup(`${project.ten_cong_trinh || 'Công trình'} — ${project.areaName}`).addTo(previewMarkers);
+        });
+        const bounds = previewLayer.getBounds();
+        previewProjects.forEach((project) => {
+          bounds.extend([project.latitude, project.longitude]);
+        });
+        if (bounds.isValid()) previewMap.fitBounds(bounds, { padding: [20, 20] });
+        window.setTimeout(() => {
+          previewMap.invalidateSize();
+          document.getElementById('previewSection').scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+          });
+        }, 0);
+        confirmButton.disabled = false;
+        allocationMessage.textContent = 'Đã hiển thị các công trình và ranh giới khu vực. Kiểm tra rồi xác nhận bổ nhiệm.';
+        allocationMessage.classList.add('success');
+      } catch (error) {
+        if (requestId !== previewRequestId) return;
+        allocationMessage.textContent = error instanceof Error ? error.message : 'Không thể xem trước khu vực.';
+        invalidatePreview();
+      } finally {
+        if (requestId === previewRequestId) previewButton.disabled = false;
+      }
+    }
+
+    previewButton.addEventListener('click', () => {
+      void showAllocationPreview();
+    });
+
+    confirmButton.addEventListener('click', async () => {
+      allocationMessage.classList.remove('success');
+      try {
+        const assignments = validateSelection();
+        if (!previewData) throw new Error('Hãy xem trước khu vực trước khi xác nhận.');
+        allocationSaving = true;
+        confirmButton.disabled = true;
+        previewButton.disabled = true;
+        allocationMessage.textContent = 'Đang lưu bổ nhiệm...';
+        const response = await fetch('/cong-trinh/phan-bo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            engineerId: selectedEngineerId,
+            assignments,
+            resolvedAreas: previewData.resolvedAreas
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || `Không thể bổ nhiệm (HTTP ${response.status}).`);
+        allocationMessage.textContent = result.message;
+        allocationMessage.classList.add('success');
+        window.setTimeout(() => window.location.reload(), 900);
+      } catch (error) {
+        allocationMessage.textContent = error instanceof Error ? error.message : 'Không thể bổ nhiệm công trình.';
+      } finally {
+        allocationSaving = false;
+        confirmButton.disabled = !previewData;
+        previewButton.disabled = !hasValidSelection();
+      }
+    });
+
+    function closeAllocation() {
+      allocationDialog.close();
+      addressPriorityEnabled = false;
+      activeAssignmentAddresses = [];
+      addressPriorityButton.disabled = true;
+      addressPriorityButton.textContent = 'Ưu tiên địa chỉ gần nhất';
+      projectRows.forEach((input) => {
+        input.checked = false;
+        input.closest('tr').querySelector('.project-start').value = '';
+        input.closest('tr').querySelector('.project-end').value = '';
+      });
+      document.getElementById('selectAllProjects').checked = false;
+      invalidatePreview();
+      allocationMessage.textContent = '';
+    }
+    document.getElementById('closeAllocation').addEventListener('click', closeAllocation);
+    document.getElementById('cancelAllocation').addEventListener('click', closeAllocation);
+
+    const progressDialog = document.getElementById('progressDialog');
+    document.querySelectorAll('.view-assignments').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const engineerId = Number(button.dataset.engineerId);
+        document.getElementById('progressEngineer').textContent = button.dataset.engineerName;
+        document.getElementById('assignmentList').innerHTML = 'Đang tải...';
+        document.getElementById('assignmentMessage').textContent = '';
+        progressDialog.showModal();
+        try {
+          const response = await fetch(`/cong-trinh/phan-bo/ky-su/${engineerId}`);
+          const assignments = await response.json();
+          if (!response.ok) throw new Error(assignments.message || 'Không thể tải tiến độ.');
+          const container = document.getElementById('assignmentList');
+          const groups = [
+            {
+              id: 'assigned',
+              label: 'Đang được phân công',
+              rows: assignments.filter((assignment) =>
+                assignment.cancellation_status !== 'da_duyet' &&
+                !assignment.da_hoan_thanh &&
+                assignment.dang_hieu_luc
+              )
+            },
+            {
+              id: 'completed',
+              label: 'Đã hoàn thành',
+              rows: assignments.filter((assignment) =>
+                assignment.cancellation_status !== 'da_duyet' &&
+                assignment.da_hoan_thanh
+              )
+            },
+            {
+              id: 'cancelled',
+              label: 'Đã hủy',
+              rows: assignments.filter((assignment) =>
+                assignment.cancellation_status === 'da_duyet'
+              )
+            }
+          ];
+          const tabList = document.createElement('div');
+          tabList.className = 'nav nav-tabs mb-3';
+          tabList.setAttribute('role', 'tablist');
+          const tabContent = document.createElement('div');
+          tabContent.className = 'tab-content';
+
+          groups.forEach((group, index) => {
+            const tabId = `assignment-${group.id}-tab`;
+            const panelId = `assignment-${group.id}-panel`;
+            const tab = document.createElement('button');
+            tab.className = `nav-link${index === 0 ? ' active' : ''}`;
+            tab.id = tabId;
+            tab.type = 'button';
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', panelId);
+            tab.setAttribute('aria-selected', String(index === 0));
+            tab.textContent = `${group.label} (${group.rows.length})`;
+            tab.addEventListener('click', () => {
+              tabList.querySelectorAll('[role="tab"]').forEach((item) => {
+                item.classList.remove('active');
+                item.setAttribute('aria-selected', 'false');
+              });
+              tabContent.querySelectorAll('[role="tabpanel"]').forEach((panel) => {
+                panel.classList.remove('active');
+                panel.hidden = true;
+              });
+              tab.classList.add('active');
+              tab.setAttribute('aria-selected', 'true');
+              const selectedPanel = document.getElementById(panelId);
+              selectedPanel.classList.add('active');
+              selectedPanel.hidden = false;
+            });
+            tabList.appendChild(tab);
+
+            const panel = document.createElement('div');
+            panel.className = `tab-pane${index === 0 ? ' active' : ''}`;
+            panel.id = panelId;
+            panel.setAttribute('role', 'tabpanel');
+            panel.setAttribute('aria-labelledby', tabId);
+            panel.hidden = index !== 0;
+            if (group.rows.length === 0) {
+              panel.textContent = `Không có công trình ${group.id === 'assigned' ? 'đang được phân công' : group.id === 'completed' ? 'đã hoàn thành' : 'đã hủy'}.`;
+            } else {
+              const table = document.createElement('table');
+              table.className = 'table table-sm table-striped table-bordered align-middle';
+              table.innerHTML = '<thead><tr><th>Công trình</th><th>Khu vực</th><th>Thời hạn</th><th>Trạng thái phân bổ</th><th>Tiến độ</th><th></th></tr></thead>';
+              const tbody = document.createElement('tbody');
+              group.rows.forEach((assignment) => {
+                const row = document.createElement('tr');
+                const formatDate = (value) => value
+                  ? new Date(value).toLocaleDateString('vi-VN')
+                  : '—';
+                const values = [
+                  assignment.ten_cong_trinh || `Công trình ${assignment.cong_trinh_id}`,
+                  assignment.khu_vuc || '—',
+                  `${formatDate(assignment.tu_ngay)} – ${formatDate(assignment.den_ngay)}`,
+                  assignment.trang_thai_phan_bo === 'da_phan_bo' ? 'Đã phân bổ' : 'Chưa phân bổ',
+                  assignment.cancellation_status === 'da_duyet'
+                    ? 'Đã hủy'
+                    : assignment.da_hoan_thanh
+                      ? 'Đã hoàn thành'
+                      : assignment.dang_hieu_luc
+                        ? 'Đang thực hiện'
+                        : 'Đã kết thúc'
+                ];
+                values.forEach((value) => {
+                  const cell = document.createElement('td');
+                  cell.textContent = value;
+                  row.appendChild(cell);
+                });
+                const actionCell = document.createElement('td');
+                if (group.id !== 'cancelled') {
+                  const toggle = document.createElement('button');
+                  toggle.type = 'button';
+                  toggle.className = assignment.da_hoan_thanh ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-outline-success';
+                  toggle.textContent = assignment.da_hoan_thanh ? 'Đánh dấu đang làm' : 'Đánh dấu hoàn thành';
+                  toggle.addEventListener('click', async () => {
+                    try {
+                      toggle.disabled = true;
+                      const update = await fetch(`/cong-trinh/phan-bo/assignment/${assignment.id}/hoan-thanh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ completed: !assignment.da_hoan_thanh })
+                      });
+                      const result = await update.json();
+                      if (!update.ok) throw new Error(result.message || 'Không thể cập nhật trạng thái.');
+                      window.location.reload();
+                    } catch (error) {
+                      toggle.disabled = false;
+                      document.getElementById('assignmentMessage').textContent =
+                        error instanceof Error ? error.message : 'Không thể cập nhật trạng thái.';
+                    }
+                  });
+                  actionCell.appendChild(toggle);
+                }
+                row.appendChild(actionCell);
+                tbody.appendChild(row);
+              });
+              table.appendChild(tbody);
+              panel.appendChild(table);
+            }
+            tabContent.appendChild(panel);
+          });
+          container.replaceChildren(tabList, tabContent);
+          applyProgressFilters();
+        } catch (error) {
+          document.getElementById('assignmentList').textContent =
+            error instanceof Error ? error.message : 'Không thể tải tiến độ.';
+        }
+      });
+    });
+    document.getElementById('closeProgress').addEventListener('click', () => progressDialog.close());
+  </script>
+</body>
+</html>

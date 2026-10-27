@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #263632;
+      --muted: #77827f;
+      --line: #e3e9e6;
+      --teal: #50b5a3;
+      --orange: #088167;
+      --gold: #ffb923;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: #fff; font-family: "Segoe UI", sans-serif; }
+    .topbar { min-height: 66px; padding: 8px max(24px, calc((100vw - 1440px) / 2)); display: flex; align-items: center; gap: 22px; color: white; background: var(--orange); }
+    .brand { color: #154d84; font-size: 23px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+    .search { display: flex; flex: 1; max-width: 490px; }
+    .search input { min-width: 0; height: 42px; border: 0; border-radius: 4px 0 0 4px; padding: 0 14px; flex: 1; }
+    .search button { width: 46px; color: white; border: 0; background: #046d5e; border-radius: 0 4px 4px 0; }
+    .top-links { display: flex; align-items: center; gap: 18px; }
+    .top-links a { color: white; text-decoration: none; font-size: 14px; white-space: nowrap; }
+    .page-title { padding: 16px max(24px, calc((100vw - 1440px) / 2)); border-bottom: 1px solid #edf0ef; font-size: 19px; font-weight: 600; }
+    .page-title a { color: inherit; text-decoration: none; }
+    main { max-width: 1390px; margin: 0 auto; padding: 0 24px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); margin: 22px 0 16px; border-bottom: 1px solid var(--line); }
+    .step-tab { padding: 0 12px 14px; color: #89918f; text-align: center; border-bottom: 2px solid transparent; font-size: 17px; }
+    .step-tab.active { color: #43a995; border-color: var(--teal); }
+    .step-tab.done { color: #65746f; }
+    .step-content { min-height: 300px; padding: 0 0 26px; }
+    .step-content[hidden] { display: none; }
+    .section-hint { margin: 0 0 18px; color: #59635f; font-size: 17px; }
+    .project-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 900px; }
+    .project-fields .mb-3 { margin-bottom: 0 !important; }
+    .project-field-wide { grid-column: 1 / -1; }
+    .form-label { margin-bottom: 6px; color: #707b77; }
+    .form-control, .form-select { min-height: 44px; border-color: #e1e6e4; border-radius: 3px; }
+    textarea.form-control { min-height: 76px; }
+    .upload-grid { display: grid; grid-template-columns: minmax(210px, 0.55fr) minmax(450px, 1.7fr); gap: 30px; padding-top: 20px; }
+    .drop-zone { min-height: 178px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; border: 2px dashed #78c4b6; border-radius: 5px; color: #68736f; text-align: center; cursor: pointer; }
+    .drop-zone.dragging { background: #effaf7; border-color: #258c78; }
+    .drop-title { margin-bottom: 8px; font-size: 16px; }
+    .hint { margin-top: 7px; color: var(--muted); font-size: 13px; }
+    .file-list { margin: 12px 0 0; padding: 0; list-style: none; }
+    .file-list li { padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .description-grid { padding-top: 36px; }
+    .description-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin: 22px 0 30px; }
+    .field-help { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 0 calc((1390px - 100vw) / 2); padding: 22px max(24px, calc((100vw - 1390px) / 2)); border-top: 1px solid #edf0ef; }
+    .btn-back, .btn-next, .btn-create { min-width: 130px; min-height: 44px; border-radius: 3px; }
+    .btn-back { color: #485550; background: white; border: 1px solid var(--line); }
+    .btn-next { color: #33270d; background: var(--gold); border: 1px solid #f3ae15; }
+    .btn-create { color: white; background: #5864d9; border: 1px solid #5864d9; }
+    .form-status { min-height: 22px; color: #9a4d22; font-size: 14px; }
+    .geometry-input { min-height: 150px !important; font-family: Consolas, monospace; font-size: 13px; }
+    @media (max-width: 800px) {
+      .topbar { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+      .search { order: 3; max-width: none; flex-basis: 100%; }
+      .top-links { overflow-x: auto; max-width: 100%; gap: 14px; }
+      .page-title { padding: 14px 16px; }
+      main { padding: 0 16px; }
+      .project-fields, .upload-grid { grid-template-columns: 1fr; gap: 16px; }
+      .project-field-wide { grid-column: auto; }
+      .description-fields { grid-template-columns: 1fr; gap: 16px; margin-top: 18px; }
+      .description-grid { padding-top: 12px; }
+      .footer { margin: 0 -16px; padding: 16px; }
+      .step-tab { padding: 0 4px 11px; font-size: 13px; }
+    }
+    @media (max-width: 420px) {
+      .footer .btn { min-width: 112px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <div class="page-title"><a href="/danh_sach_cong_trinh">▱ &nbsp; Tạo dự án mới</a></div>
+
+  <main>
+    <form id="project-form" method="POST" action="/cong-trinh/them" enctype="multipart/form-data">
+      <div class="steps" aria-label="Các bước tạo dự án">
+        <div class="step-tab active" data-step-tab="0">1. Thông tin công trình</div>
+        <div class="step-tab" data-step-tab="1">2. Tải tài liệu</div>
+        <div class="step-tab" data-step-tab="2">3. Mặt bằng + Hố khoan</div>
+      </div>
+
+      <section class="step-content" data-step="0">
+        <p class="section-hint">Nhập thông tin theo cấu trúc bảng <code>cong_trinh</code>.</p>
+        <div class="project-fields">
+          <div class="mb-3">
+            <label class="form-label" for="project-name">Tên công trình</label>
+            <input class="form-control" id="project-name" name="ten_cong_trinh" placeholder="Nhập tên công trình" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="hang-muc">Hạng mục</label>
+            <input class="form-control" id="hang-muc" name="hang_muc" placeholder="Nhập hạng mục" />
+          </div>
+          <div class="mb-3 project-field-wide">
+            <label class="form-label" for="address">Địa điểm</label>
+            <textarea class="form-control" id="address" name="dia_diem" placeholder="Nhập địa điểm công trình"></textarea>
+          </div>
+          <div class="mb-3 project-field-wide">
+            <label class="form-label" for="notes">Ghi chú</label>
+            <textarea class="form-control" id="notes" name="ghi_chu" placeholder="Nhập ghi chú"></textarea>
+          </div>
+        </div>
+        <div class="field-help mt-3"><code>id</code> được tạo tự động. <code>ngay_tao</code> và <code>ngay_cap_nhat</code> do cơ sở dữ liệu tự ghi theo mặc định.</div>
+      </section>
+
+      <section class="step-content" data-step="1" hidden>
+        <div class="upload-grid">
+          <div>
+            <label class="form-label" for="document-type">Loại tài liệu:</label>
+            <select class="form-select" id="document-type" name="documentType">
+              <option value="Báo cáo thiết kế">Báo cáo thiết kế</option>
+              <option value="Báo cáo khảo sát địa chất">Báo cáo khảo sát địa chất</option>
+              <option value="Tài liệu khác">Tài liệu khác</option>
+            </select>
+          </div>
+          <div>
+            <label class="drop-zone" id="drop-zone" for="project-files">
+              <span class="drop-title">Thả tài liệu vào đây hoặc bấm để tải lên</span>
+              <span>Chỉ chấp nhận file Office, hình ảnh, PDF và DWG</span>
+              <span class="hint">Tối đa 10 file, mỗi file không quá 10 MB. File sẽ được tải từ hạng mục trong danh sách công trình.</span>
+            </label>
+            <input class="visually-hidden" id="project-files" name="files" type="file" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.pdf,.dwg" />
+            <ul class="file-list" id="file-list" aria-live="polite"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="step-content description-grid" data-step="2" hidden>
+        <h2 class="h4">Thông tin mặt bằng</h2>
+        <p class="field-help">ID và mã công trình được liên kết tự động khi lưu; ngày tạo/cập nhật do cơ sở dữ liệu tự ghi.</p>
+        <div class="description-fields">
+          <div>
+            <label class="form-label" for="ten-mat-bang">Tên mặt bằng:</label>
+            <input class="form-control" id="ten-mat-bang" name="ten_mat_bang" required />
+          </div>
+          <div>
+            <label class="form-label" for="loai-mat-bang">Loại mặt bằng:</label>
+            <input class="form-control" id="loai-mat-bang" name="loai_mat_bang" required placeholder="Ví dụ: Đa giác 8 đỉnh" />
+          </div>
+          <div>
+            <label class="form-label" for="cap-mat-bang">Cấp mặt bằng:</label>
+            <input class="form-control" id="cap-mat-bang" name="cap_mat_bang" type="number" min="1" step="1" placeholder="Chọn cấp mặt bằng" />
+          </div>
+          <div>
+            <label class="form-label" for="ma-he-toa-do">Mã hệ tọa độ nguồn:</label>
+            <input class="form-control" id="ma-he-toa-do" name="ma_he_toa_do_nguon" value="WGS84" required />
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="ranh-gioi">Tọa độ ranh giới:</label>
+          <textarea class="form-control geometry-input" id="ranh-gioi" name="ranh_gioi" required
+            placeholder="WGS84: 105.68012 18.67328, 105.68032 18.67328, 105.68035 18.67341&#10;X/Y: 596182.6531 2064426.6524, 596183.7268 2064447.4179, 596244.3462 2064444.2904"
+            aria-describedby="geometry-help" inputmode="decimal" spellcheck="false"></textarea>
+          <div class="field-help" id="geometry-help">Nhập kinh độ/vĩ độ WGS84 như form sửa, hoặc nhập X/Y VN-2000 TM-3 (kinh tuyến trục 104°45′, đơn vị mét). Hệ thống tự nhận dạng và chuyển X/Y sang WGS84 khi lưu; ranh giới sẽ tự khép kín. Có thể ngăn cách các cặp bằng dấu phẩy hoặc chấm phẩy, hoặc dán GeoJSON Polygon/MultiPolygon. Nếu nhập X/Y, mã hệ tọa độ nguồn sẽ tự đổi sang VN-2000 TM-3.</div>
+        </div>
+
+        <div class="mb-4">
+          <h2 class="h4">Nhập hố khoan và số liệu thí nghiệm từ Excel</h2>
+          <p class="field-help">Chọn file Excel theo mẫu dùng ở trang Hố khoan. Hệ thống sẽ liên kết dữ liệu vào công trình vừa tạo và nhập các bảng hố khoan, lớp đất, mẫu thí nghiệm, thành phần hạt, cắt phẳng và giá trị trung bình lớp.</p>
+          <label class="form-label" for="borehole-excel">File Excel (.xls, .xlsx) — không bắt buộc</label>
+          <input class="form-control" id="borehole-excel" name="hoKhoanExcel" type="file" accept=".xls,.xlsx" />
+          <div class="field-help mt-2" id="borehole-excel-name" aria-live="polite">Chưa chọn file Excel. Có thể tạo công trình và mặt bằng trước rồi nhập Excel sau.</div>
+        </div>
+      </section>
+
+      <div class="form-status" id="form-status" role="status" aria-live="polite"></div>
+      <div class="footer">
+        <button class="btn btn-back" id="back-button" type="button" hidden>← &nbsp; Quay lại</button>
+        <button class="btn btn-next" id="next-button" type="button">Lưu &amp; tiếp tục &nbsp; →</button>
+        <button class="btn btn-create" id="create-button" type="button" hidden>✓ &nbsp; Tạo dự án</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const tabs = Array.from(document.querySelectorAll('[data-step-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-step]'));
+    const backButton = document.getElementById('back-button');
+    const nextButton = document.getElementById('next-button');
+    const createButton = document.getElementById('create-button');
+    const status = document.getElementById('form-status');
+    const boreholeExcel = document.getElementById('borehole-excel');
+    let currentStep = 0;
+    boreholeExcel.addEventListener('change', () => {
+      const selectedFile = boreholeExcel.files[0];
+      document.getElementById('borehole-excel-name').textContent =
+        selectedFile ? `Đã chọn: ${selectedFile.name}` : 'Chưa chọn file Excel.';
+    });
+
+    function showStep(step) {
+      currentStep = step;
+      panels.forEach((panel, index) => { panel.hidden = index !== step; });
+      tabs.forEach((tab, index) => {
+        tab.classList.toggle('active', index === step);
+        tab.classList.toggle('done', index < step);
+        tab.setAttribute('aria-current', index === step ? 'step' : 'false');
+      });
+      backButton.hidden = step === 0;
+      nextButton.hidden = step === panels.length - 1;
+      createButton.hidden = step !== panels.length - 1;
+      status.textContent = '';
+    }
+
+    function validateStep() {
+      const fields = Array.from(panels[currentStep].querySelectorAll('input, textarea, select'));
+      const invalid = fields.find((field) => !field.checkValidity());
+      if (invalid) {
+        invalid.reportValidity();
+        return false;
+      }
+      return true;
+    }
+
+    function parseCoordinatePairs(value) {
+      const input = value.trim();
+      if (!input) throw new Error('missing coordinates');
+
+      const parsePair = (part) => {
+        const values = part.trim().split(/[\s,]+/).filter(Boolean);
+        if (values.length !== 2) throw new Error('invalid coordinate pair');
+        const pair = values.map(Number);
+        if (pair.some((coordinate) => !Number.isFinite(coordinate))) {
+          throw new Error('coordinate is not finite');
+        }
+        return pair;
+      };
+
+      if (input.includes(';')) {
+        return input.split(';').map(parsePair);
+      }
+
+      const commaSeparatedParts = input.split(',');
+      const pairs = commaSeparatedParts.map((part) => part.trim().split(/\s+/).filter(Boolean));
+      if (pairs.every((pair) => pair.length === 2)) {
+        return pairs.map((pair) => parsePair(pair.join(' ')));
+      }
+
+      const values = input.split(/[,\s]+/).filter(Boolean);
+      if (values.length % 2 !== 0) throw new Error('incomplete coordinate pair');
+      return Array.from({ length: values.length / 2 }, (_, index) =>
+        parsePair(values.slice(index * 2, index * 2 + 2).join(' ')),
+      );
+    }
+
+    function getGeometry(input) {
+      const value = input.trim();
+      if (value.startsWith('{')) {
+        return JSON.parse(value);
+      }
+
+      const points = parseCoordinatePairs(value);
+      const uniquePoints = new Set(points.map((point) => point.join(',')));
+      if (points.length < 3 || uniquePoints.size < 3) {
+        throw new Error('at least three distinct points are required');
+      }
+      const isGeographic = points.every(([longitude, latitude]) =>
+        longitude >= -180 && longitude <= 180 &&
+        latitude >= -90 && latitude <= 90,
+      );
+      if (isGeographic) {
+        const firstPoint = points[0];
+        const lastPoint = points[points.length - 1];
+        if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+          points.push([...firstPoint]);
+        }
+        return { type: 'Polygon', coordinates: [points] };
+      }
+
+      const isVn2000Tm3 = points.every(([easting, northing]) =>
+        easting >= 100000 && easting <= 900000 &&
+        northing >= 0 && northing <= 3000000,
+      );
+      if (!isVn2000Tm3) {
+        throw new Error('coordinates are outside supported systems');
+      }
+      return null;
+    }
+
+    function detectCoordinateSystem(input) {
+      const points = parseCoordinatePairs(input);
+      if (points.every(([longitude, latitude]) =>
+        longitude >= -180 && longitude <= 180 &&
+        latitude >= -90 && latitude <= 90,
+      )) {
+        return 'WGS84';
+      }
+      if (points.every(([easting, northing]) =>
+        easting >= 100000 && easting <= 900000 &&
+        northing >= 0 && northing <= 3000000,
+      )) {
+        return 'VN-2000 TM-3 (kinh tuyến trục 104°45′)';
+      }
+      throw new Error('coordinates are outside supported systems');
+    }
+
+    nextButton.addEventListener('click', () => {
+      if (!validateStep()) return;
+      showStep(Math.min(currentStep + 1, panels.length - 1));
+    });
+    backButton.addEventListener('click', () => showStep(Math.max(currentStep - 1, 0)));
+
+    const fileInput = document.getElementById('project-files');
+    const dropZone = document.getElementById('drop-zone');
+    const fileList = document.getElementById('file-list');
+    const allowedExtensions = /\.(docx?|xlsx?|pptx?|jpe?g|png|gif|pdf|dwg)$/i;
+    let hasInvalidFiles = false;
+
+    function showFiles(files) {
+      fileList.replaceChildren();
+      const invalidFiles = [];
+      Array.from(files).forEach((file) => {
+        if (!allowedExtensions.test(file.name)) {
+          invalidFiles.push(file.name);
+          return;
+        }
+        const item = document.createElement('li');
+        item.textContent = file.name;
+        fileList.appendChild(item);
+      });
+      hasInvalidFiles = invalidFiles.length > 0;
+      status.textContent = invalidFiles.length ? 'Định dạng không được hỗ trợ: ' + invalidFiles.join(', ') : '';
+    }
+
+    fileInput.addEventListener('change', () => showFiles(fileInput.files));
+    ['dragenter', 'dragover'].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.add('dragging');
+    }));
+    ['dragleave', 'drop'].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.remove('dragging');
+    }));
+    dropZone.addEventListener('drop', (event) => {
+      const transfer = new DataTransfer();
+      Array.from(event.dataTransfer.files).forEach((file) => transfer.items.add(file));
+      fileInput.files = transfer.files;
+      showFiles(fileInput.files);
+    });
+
+    document.getElementById('project-form').addEventListener('submit', (event) => event.preventDefault());
+    createButton.addEventListener('click', () => {
+      if (!validateStep()) return;
+      if (hasInvalidFiles) {
+        showStep(1);
+        status.textContent = 'Vui lòng bỏ các file có định dạng không được hỗ trợ.';
+        return;
+      }
+      const geometryInput = document.getElementById('ranh-gioi');
+      const sourceCrsInput = document.getElementById('ma-he-toa-do');
+      try {
+        const geometry = getGeometry(geometryInput.value);
+        if (!geometryInput.value.trim().startsWith('{')) {
+          const detectedCrs = detectCoordinateSystem(geometryInput.value);
+          if (
+            sourceCrsInput.value === 'WGS84' ||
+            sourceCrsInput.value === 'VN-2000 TM-3 (kinh tuyến trục 104°45′)'
+          ) {
+            sourceCrsInput.value = detectedCrs;
+          }
+        }
+        if (geometry && (
+          !['Polygon', 'MultiPolygon'].includes(geometry.type) ||
+          !Array.isArray(geometry.coordinates) ||
+          geometry.coordinates.length === 0
+        )) {
+          throw new Error('invalid geometry');
+        }
+        if (geometry) {
+          geometryInput.value = JSON.stringify(geometry);
+        }
+      } catch {
+        status.textContent = 'Tọa độ không hợp lệ. Nhập ít nhất 3 cặp tọa độ cùng dạng: kinh độ/vĩ độ WGS84 hoặc X/Y VN-2000 TM-3 kinh tuyến trục 104°45′.';
+        geometryInput.focus();
+        return;
+      }
+
+      const excelFile = boreholeExcel.files[0];
+      if (excelFile && !/\.(xls|xlsx)$/i.test(excelFile.name)) {
+        status.textContent = 'File hố khoan phải có định dạng .xls hoặc .xlsx.';
+        boreholeExcel.focus();
+        return;
+      }
+      document.getElementById('project-form').submit();
+    });
+  </script>
+</body>
+</html>

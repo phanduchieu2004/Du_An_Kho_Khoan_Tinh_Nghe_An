@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    :root { color-scheme: light; --ink: #1f302d; --muted: #667772; --line: #dce5e1; --green: #17785f; }
+    body { margin: 0; background: #f3f6f4; color: var(--ink); font-family: "Segoe UI", sans-serif; }
+    .topbar { background: #173c34; color: white; }
+    .topbar-inner { max-width: 1000px; margin: 0 auto; padding: 16px 24px; }
+    .brand { color: white; font-size: 18px; font-weight: 700; text-decoration: none; }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 48px; }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    h1 { margin: 0; font-size: 25px; font-weight: 700; }
+    .card { border: 1px solid var(--line); box-shadow: 0 3px 12px #1f302d0a; }
+    .field-label { font-weight: 600; }
+    .help { color: var(--muted); font-size: 14px; }
+    .project-picker { position: relative; }
+    .project-options { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 5; max-height: 260px; overflow-y: auto; padding: 4px; border: 1px solid var(--line); border-radius: 6px; background: white; box-shadow: 0 6px 18px #1f302d1c; }
+    .project-options[hidden] { display: none; }
+    .project-option { width: 100%; padding: 9px 12px; border: 0; border-radius: 4px; background: white; color: var(--ink); text-align: left; }
+    .project-option:hover, .project-option:focus { background: #e9f0ed; outline: none; }
+    .project-empty { margin: 0; padding: 10px 12px; color: var(--muted); font-size: 14px; }
+    .mapping { background: #f5f8f6; border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+    .mapping ul { margin-bottom: 0; padding-left: 20px; }
+    @media (max-width: 600px) {
+      main { padding: 24px 14px 36px; }
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      h1 { font-size: 21px; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <div class="page-heading">
+      <h1><%= title %></h1>
+      <a class="btn btn-outline-success" href="/ho-khoan">Quay lại danh sách</a>
+    </div>
+
+    <% if (typeof error !== 'undefined') { %>
+      <div class="alert alert-danger" role="alert"><%= error %></div>
+    <% } %>
+
+    <% if (typeof result !== 'undefined') { %>
+      <div class="alert alert-success" role="status">
+        Đã thêm <strong><%= result.created %></strong> hố khoan mới,
+        bỏ qua <strong><%= result.skipped %></strong> hố khoan đã có.
+        <div>Đã nhập <strong><%= result.importedSamples %></strong> mẫu mới và cập nhật <strong><%= result.updatedSamples %></strong> mẫu đã tồn tại.</div>
+        <div>Đã lưu <strong><%= result.layers %></strong> lớp đất, <strong><%= result.grainRecords %></strong> thành phần hạt, <strong><%= result.cutRecords %></strong> kết quả cắt phẳng và <strong><%= result.averageRecords %></strong> giá trị trung bình lớp.</div>
+        <div class="mt-1">File: <%= fileName %></div>
+        <div class="mt-2">Mã hố khoan đọc được: <%= result.holeNames.join(', ') %></div>
+      </div>
+    <% } %>
+
+    <section class="card mb-4">
+      <div class="card-body p-4">
+        <form action="/ho-khoan/them" method="post" enctype="multipart/form-data">
+          <div class="mb-4">
+            <label class="form-label field-label" for="cong_trinh_search">Công trình</label>
+            <div class="project-picker">
+              <input class="form-control" id="cong_trinh_search" type="search" placeholder="Tìm hoặc chọn công trình..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="cong_trinh_options" aria-expanded="false" required <%= projects.length === 0 ? 'disabled' : '' %> />
+              <input id="cong_trinh_id" name="cong_trinh_id" type="hidden" />
+              <div class="project-options" id="cong_trinh_options" role="listbox" hidden>
+              <% projects.forEach((project) => { %>
+                <button class="project-option" type="button" role="option" data-id="<%= project.id %>" data-name="<%= project.ten_cong_trinh %>"><%= project.ten_cong_trinh %> (mã <%= project.id %>)</button>
+              <% }) %>
+              </div>
+            </div>
+            <% if (projects.length === 0) { %>
+              <div class="form-text text-danger">
+                Chưa có công trình. <a href="/cong-trinh/them">Tạo công trình</a> trước khi nhập hố khoan.
+              </div>
+            <% } else { %>
+              <div class="form-text">Chọn công trình phù hợp với thông tin công trình ghi ở đầu file Excel.</div>
+            <% } %>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label field-label" for="file">File Excel</label>
+            <input class="form-control" id="file" name="file" type="file" accept=".xls,.xlsx" required <%= projects.length === 0 ? 'disabled' : '' %> />
+            <div class="form-text">Chấp nhận .xls, .xlsx; dung lượng tối đa 10 MB.</div>
+          </div>
+
+          <button class="btn btn-success" type="submit" <%= projects.length === 0 ? 'disabled' : '' %>>
+            Nhập hố khoan
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="mapping">
+      <h2 class="h5">Dữ liệu được lấy từ file Excel</h2>
+      <ul>
+        <li>Cột <strong>“Hố khoan”</strong> liên kết dữ liệu mẫu tới hố khoan; cột số hiệu mẫu, thứ tự, độ sâu và các chỉ tiêu cơ lý được lưu vào bảng mẫu thí nghiệm.</li>
+        <li>Các cột thành phần hạt được lưu vào bảng thành phần hạt; áp lực, góc ma sát và lực dính kết được lưu vào bảng cắt phẳng.</li>
+        <li>Các dòng <strong>“Giá trị trung bình lớp”</strong> tạo lớp đất, liên kết mẫu theo từng lớp và lưu giá trị trung bình có cột tương ứng trong CSDL.</li>
+        <li><strong>Công trình</strong>: liên kết với công trình được chọn ở trên; tên, địa điểm và hạng mục trong đầu file không tự tạo công trình mới.</li>
+        <li><strong>Tọa độ X, Y, vĩ độ, kinh độ</strong>: file mẫu không có các cột này nên để trống sau khi nhập.</li>
+        <li>Nếu nhập lại file, mẫu được nhận diện theo hố khoan + số hiệu mẫu và cập nhật thay vì tạo bản sao.</li>
+      </ul>
+    </section>
+  </main>
+  <script>
+    const projectSearch = document.getElementById('cong_trinh_search');
+    const projectId = document.getElementById('cong_trinh_id');
+    const projectOptions = document.getElementById('cong_trinh_options');
+    const projectItems = Array.from(projectOptions.querySelectorAll('.project-option'));
+
+    function filterProjects() {
+      const query = projectSearch.value.trim().toLocaleLowerCase('vi');
+      let visibleCount = 0;
+
+      projectItems.forEach((option) => {
+        const matches = option.textContent.toLocaleLowerCase('vi').includes(query);
+        option.hidden = !matches;
+        if (matches) visibleCount += 1;
+      });
+
+      const emptyMessage = projectOptions.querySelector('.project-empty');
+      if (visibleCount === 0) {
+        if (!emptyMessage) {
+          const message = document.createElement('p');
+          message.className = 'project-empty';
+          message.textContent = 'Không tìm thấy công trình phù hợp.';
+          projectOptions.append(message);
+        }
+      } else {
+        emptyMessage?.remove();
+      }
+
+      projectOptions.hidden = false;
+      projectSearch.setAttribute('aria-expanded', 'true');
+    }
+
+    projectSearch.addEventListener('focus', filterProjects);
+    projectSearch.addEventListener('input', () => {
+      projectId.value = '';
+      projectSearch.setCustomValidity('Vui lòng chọn công trình trong danh sách.');
+      filterProjects();
+    });
+    projectSearch.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        projectOptions.hidden = true;
+        projectSearch.setAttribute('aria-expanded', 'false');
+      }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        projectOptions.querySelector('.project-option:not([hidden])')?.focus();
+      }
+    });
+
+    projectItems.forEach((option) => {
+      option.addEventListener('click', () => {
+        projectId.value = option.dataset.id;
+        projectSearch.value = `${option.dataset.name} (mã ${option.dataset.id})`;
+        projectSearch.setCustomValidity('');
+        projectOptions.hidden = true;
+        projectSearch.setAttribute('aria-expanded', 'false');
+      });
+      option.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          projectOptions.hidden = true;
+          projectSearch.focus();
+        }
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          (option.nextElementSibling ?? option.parentElement.firstElementChild)?.focus();
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (option.previousElementSibling) {
+            option.previousElementSibling.focus();
+          } else {
+            projectSearch.focus();
+          }
+        }
+      });
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.project-picker')) {
+        projectOptions.hidden = true;
+        projectSearch.setAttribute('aria-expanded', 'false');
+      }
+    });
+  </script>
+</body>
+</html>

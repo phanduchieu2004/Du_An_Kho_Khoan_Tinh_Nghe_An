@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { width: min(760px, calc(100% - 32px)); margin: 40px auto; padding: 28px; background: #fff; border: 1px solid #dce5e1; border-radius: 8px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .wide { grid-column: 1 / -1; }
+    textarea { min-height: 100px; }
+    .survey-section { margin-top: 28px; padding-top: 22px; border-top: 1px solid #dce5e1; }
+    .survey-card { margin-top: 18px; padding: 18px; background: #f8faf9; border: 1px solid #e3ebe7; border-radius: 8px; }
+    .survey-card h3 { font-size: 1.05rem; margin-bottom: 18px; }
+    .excel-import { margin: 0 0 24px; padding: 20px; border: 1px solid #dce5e1; border-radius: 8px; background: #f8faf9; }
+    .excel-import h2 { margin-bottom: 8px; }
+    .excel-import form { display: flex; align-items: end; gap: 12px; }
+    .excel-import form > div { flex: 1; }
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+    @media (max-width: 600px) { .fields { grid-template-columns: 1fr; } .wide { grid-column: auto; } main { padding: 20px; } .survey-card { padding: 14px; } .excel-import form { align-items: stretch; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <h1 class="h3 mb-1">Sửa thông tin công trình</h1>
+    <p class="text-secondary mb-4">Mã công trình: <strong><%= project.id %></strong></p>
+    <% if (importSummary?.holes !== null && importSummary?.holes !== undefined) { %>
+      <div class="alert alert-success" role="status">
+        Đã nhập file Excel: tạo <strong><%= importSummary.holes %></strong> hố khoan,
+        thêm <strong><%= importSummary.samples %></strong> mẫu và cập nhật
+        <strong><%= importSummary.updatedSamples %></strong> mẫu hiện có.
+      </div>
+    <% } %>
+    <% if (pendingEditSubmitted) { %>
+      <div class="alert alert-info" role="status">
+        Yêu cầu sửa đã được gửi để duyệt. Thông tin công trình hiện tại vẫn được giữ nguyên cho đến khi Quản trị viên duyệt.
+      </div>
+    <% } %>
+    <div class="mb-3">
+      <a class="btn btn-outline-secondary btn-sm" href="/cong-trinh/<%= project.id %>/lich-su-sua">Xem lịch sử sửa công trình</a>
+    </div>
+    <section class="excel-import" aria-labelledby="excel-import-heading">
+      <h2 class="h5" id="excel-import-heading">Nhập hố khoan từ Excel</h2>
+      <p class="text-secondary small">Chọn file Excel theo mẫu để thêm/cập nhật hố khoan, lớp đất và số liệu thí nghiệm cho công trình này. File tối đa 10 MB.</p>
+      <form method="post" action="/cong-trinh/<%= project.id %>/nhap-ho-khoan" enctype="multipart/form-data">
+        <div>
+          <label class="form-label" for="project-borehole-excel">File Excel (.xls, .xlsx)</label>
+          <input class="form-control" id="project-borehole-excel" name="hoKhoanExcel" type="file" accept=".xls,.xlsx" required />
+        </div>
+        <button class="btn btn-success" type="submit">Nhập hố khoan</button>
+      </form>
+    </section>
+    <form method="post" action="/cong-trinh/<%= project.id %>/sua">
+      <div class="fields">
+        <div>
+          <label class="form-label" for="ten_cong_trinh">Tên công trình</label>
+          <input class="form-control" id="ten_cong_trinh" name="ten_cong_trinh" value="<%= project.ten_cong_trinh ?? '' %>" />
+        </div>
+        <div>
+          <label class="form-label" for="hang_muc">Hạng mục</label>
+          <input class="form-control" id="hang_muc" name="hang_muc" value="<%= project.hang_muc ?? '' %>" />
+        </div>
+        <div class="wide">
+          <label class="form-label" for="dia_diem">Địa điểm</label>
+          <textarea class="form-control" id="dia_diem" name="dia_diem"><%= project.dia_diem ?? '' %></textarea>
+        </div>
+        <div class="wide">
+          <label class="form-label" for="ghi_chu">Ghi chú</label>
+          <textarea class="form-control" id="ghi_chu" name="ghi_chu"><%= project.ghi_chu ?? '' %></textarea>
+        </div>
+      </div>
+      <section class="survey-section" aria-labelledby="survey-heading">
+        <h2 class="h5 mb-1" id="survey-heading">Thông tin mặt bằng</h2>
+        <% if (surveys.length === 0) { %>
+          <p class="text-secondary mb-0">Công trình này chưa có mặt bằng.</p>
+          <input type="hidden" name="mat_bang_ids" value="" />
+        <% } else { %>
+          <p class="text-secondary">Chỉnh sửa thông tin các mặt bằng đã liên kết với công trình.</p>
+          <input type="hidden" name="mat_bang_ids" value="<%= surveys.map(survey => survey.id).join(',') %>" />
+          <% surveys.forEach((survey, index) => { const prefix = `mat_bang_${survey.id}_`; %>
+            <div class="survey-card">
+              <h3>Mặt bằng <%= index + 1 %> · Mã <%= survey.id %></h3>
+              <div class="fields">
+                <div>
+                  <label class="form-label" for="<%= prefix %>ten_mat_bang">Tên mặt bằng</label>
+                  <input class="form-control" id="<%= prefix %>ten_mat_bang" name="<%= prefix %>ten_mat_bang" value="<%= survey.ten_mat_bang ?? '' %>" required />
+                </div>
+                <div>
+                  <label class="form-label" for="<%= prefix %>loai_mat_bang">Loại mặt bằng</label>
+                  <input class="form-control" id="<%= prefix %>loai_mat_bang" name="<%= prefix %>loai_mat_bang" value="<%= survey.loai_mat_bang ?? '' %>" required />
+                </div>
+                <div>
+                  <label class="form-label" for="<%= prefix %>cap_mat_bang">Cấp mặt bằng</label>
+                  <input class="form-control" id="<%= prefix %>cap_mat_bang" name="<%= prefix %>cap_mat_bang" type="number" min="1" step="1" value="<%= survey.cap_mat_bang ?? '' %>" />
+                </div>
+                <div>
+                  <label class="form-label" for="<%= prefix %>ma_he_toa_do_nguon">Mã hệ tọa độ nguồn</label>
+                  <input class="form-control" id="<%= prefix %>ma_he_toa_do_nguon" name="<%= prefix %>ma_he_toa_do_nguon" value="<%= survey.ma_he_toa_do_nguon ?? '' %>" required />
+                </div>
+                <div>
+                  <label class="form-label" for="<%= prefix %>trang_thai">Trạng thái</label>
+                  <input class="form-control" id="<%= prefix %>trang_thai" name="<%= prefix %>trang_thai" value="<%= survey.trang_thai ?? '' %>" required />
+                </div>
+                <div class="wide">
+                  <% const geometry = survey.ranh_gioi; const rings = geometry?.type === 'Polygon' ? [geometry.coordinates?.[0]] : geometry?.type === 'MultiPolygon' ? [geometry.coordinates?.[0]?.[0]] : []; const boundaryCoordinates = (rings[0] || []).map(point => point.join(' ')).join(', '); %>
+                  <label class="form-label" for="<%= prefix %>ranh_gioi">Tọa độ ranh giới</label>
+                  <textarea class="form-control font-monospace" id="<%= prefix %>ranh_gioi" name="<%= prefix %>ranh_gioi" placeholder="105.679964 18.673177, 105.680464 18.673177, 105.680464 18.673517" required><%= boundaryCoordinates %></textarea>
+                  <div class="form-text">Nhập kinh độ/vĩ độ WGS84 như hiện tại hoặc X/Y VN-2000 TM-3 (kinh tuyến trục 104°45′, mét). Tọa độ X/Y sẽ được chuyển phép chiếu và datum VN-2000 sang WGS84; ranh giới tự khép kín khi lưu. Có thể ngăn cách các cặp bằng dấu phẩy hoặc chấm phẩy.</div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </section>
+      <div class="actions">
+        <a class="btn btn-outline-secondary" href="/cong-trinh/danh-sach">Hủy</a>
+        <button class="btn btn-primary" type="submit">Gửi yêu cầu duyệt sửa</button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

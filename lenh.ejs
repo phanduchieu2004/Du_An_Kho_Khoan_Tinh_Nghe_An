@@ -1,0 +1,52 @@
+npm run start:dev
+
+
+quản lý thêm chức năng xác thực tài khoản ( cột xác thực)
+CHO_DUYET
+HOAT_DONG
+TAM_KHOA
+DA_XOA
+
+
+csdl 
+ALTER TABLE nguoi_dung
+ADD COLUMN email VARCHAR(255) UNIQUE,
+ADD COLUMN dia_chi TEXT,
+ADD COLUMN so_dien_thoai VARCHAR(20),‌
+ADD COLUMN ma_ky_su VARCHAR(50),
+ADD COLUMN chuyen_nganh VARCHAR(100),
+ADD COLUMN don_vi_cong_tac VARCHAR(255),
+ADD COLUMN so_chung_chi_hanh_nghe VARCHAR(100),
+ADD COLUMN trang_thai VARCHAR(20) DEFAULT 'CHO_DUYET',
+ADD COLUMN ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN lan_dang_nhap_cuoi TIMESTAMP,
+ADD COLUMN khu_vuc_duoc_xem TEXT;
+INSERT INTO nguoi_dung (
+    ten_dang_nhap,
+    mat_khau,
+    ho_ten,
+    email,
+    dia_chi,
+    so_dien_thoai,
+    ma_ky_su,
+    chuyen_nganh,
+    don_vi_cong_tac,
+    so_chung_chi_hanh_nghe,
+    trang_thai,
+    khu_vuc_duoc_xem
+)
+VALUES
+(
+    'Phanduchieu',
+    'Hieu2004@',
+    'Nguyễn Văn A',
+    'phanduchieu2004@gmail.com',
+    'Số 08 Võ Thị Sáu, TP Vinh, Nghệ An',
+    '0333552221',
+    'KS001',
+    'Trắc địa',
+    'Công ty Khảo sát Địa chính Nghệ An',
+    'CC-NA-2025-001',
+    'HOAT_DONG',
+    'Phường Trường Vinh, TP Vinh, Nghệ An'
+);

@@ -1,0 +1,107 @@
+<style>
+  .engineer-portal-header {
+    min-height: 76px;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #057362;
+    color: #fff;
+  }
+  .engineer-portal-header a { color: inherit; text-decoration: none; }
+  .engineer-portal-brand {
+    flex: none;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .engineer-portal-nav {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 5px;
+  }
+  .engineer-portal-nav > a,
+  .engineer-portal-nav summary {
+    padding: 11px 12px;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .engineer-portal-nav > a:hover,
+  .engineer-portal-nav summary:hover,
+  .engineer-portal-nav details[open] summary { background: #ffffff26; }
+  .engineer-portal-nav details { position: relative; }
+  .engineer-portal-submenu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 1100;
+    display: grid;
+    min-width: 230px;
+    padding: 6px;
+    border: 1px solid #dce5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 28px #19332e24;
+  }
+  .engineer-portal-nav .engineer-portal-submenu a {
+    padding: 10px;
+    border-radius: 5px;
+    color: #19332e;
+    font-size: 13px;
+  }
+  .engineer-portal-nav .engineer-portal-submenu a:hover { background: #edf5f1; }
+  .engineer-portal-logout { margin: 0; }
+  .engineer-portal-logout button {
+    padding: 9px 13px;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #19332e;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  @media (max-width: 850px) {
+    .engineer-portal-header { flex-wrap: wrap; gap: 8px 14px; padding: 12px 16px; }
+    .engineer-portal-nav { order: 3; flex-basis: 100%; overflow-x: auto; }
+    .profile-button { margin-left: auto; }
+    .engineer-portal-nav details { position: static; }
+    .engineer-portal-submenu { top: auto; }
+  }
+  @media (max-width: 480px) {
+    .engineer-portal-header { gap: 8px; }
+    .engineer-portal-brand { font-size: 17px; }
+    .engineer-portal-nav > a,
+    .engineer-portal-nav summary { padding: 9px; font-size: 12px; }
+  }
+</style>
+<header class="engineer-portal-header">
+  <a class="engineer-portal-brand" href="/">Hồ sơ khoan địa chất</a>
+  <nav class="engineer-portal-nav" aria-label="Điều hướng cổng Kỹ sư">
+    <a href="/">Bản đồ</a>
+    <a href="/cong-trinh/danh-sach">Quản lý công trình</a>
+    <a href="/cong-trinh/da-tao">Công trình đã tạo</a>
+    <a href="/cong-trinh/lich-su-phan-cong">Lịch sử phân công</a>
+    <a href="/cong-trinh/yeu-cau-huy">Hủy phân công</a>
+    <a href="/ho-tro">Hỗ trợ</a>
+    <details>
+      <summary>Nhập/Xuất dữ liệu</summary>
+      <div class="engineer-portal-submenu">
+        <a href="/cong-trinh/them">Tạo dự án mới</a>
+        <a href="/ho-khoan/them">Nhập hố khoan từ Excel</a>
+        <a href="/xuat-file/tong-hop">Xuất file tổng hợp</a>
+      </div>
+    </details>
+  </nav>
+  <%- include('nut_ho_so') %>
+  <form action="/dang-xuat" method="post" class="engineer-portal-logout">
+    <button type="submit">Đăng xuất</button>
+  </form>
+</header>
+<script defer src="/js/bo-loc-bang.js"></script>
+<%- include('nut_uy_quyen') %>

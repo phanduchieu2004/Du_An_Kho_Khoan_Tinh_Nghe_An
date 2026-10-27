@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 48px; }
+    .panel { padding: 22px; border: 1px solid #dce5e1; border-radius: 8px; background: #fff; }
+    .table-frame { overflow: auto; border: 1px solid #dce5e1; background: #fff; }
+    table { margin: 0 !important; white-space: nowrap; }
+    @media (max-width: 700px) { main { padding: 22px 12px 36px; } .panel { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <div class="mb-4">
+      <h1 class="h3 mb-1"><%= title %></h1>
+      <p class="text-secondary mb-0">Bạn có thể gửi yêu cầu cho bất kỳ phân công nào chưa hoàn thành, không phụ thuộc thời hạn. Phân công chỉ bị gỡ sau khi Quản trị viên duyệt.</p>
+    </div>
+    <% if (submitted) { %>
+      <div class="alert alert-success" role="status">Đã gửi đơn hủy. Phân công vẫn giữ nguyên trong khi chờ duyệt.</div>
+    <% } %>
+    <section class="panel mb-4">
+      <h2 class="h5">Tạo đơn hủy</h2>
+      <% if (assignments.length === 0) { %>
+        <p class="mb-0">Không có phân công chưa hoàn thành đủ điều kiện gửi đơn hủy.</p>
+      <% } else { %>
+        <form method="post" action="/cong-trinh/yeu-cau-huy">
+          <div class="mb-3">
+            <label class="form-label" for="assignmentId">Công trình được phân công</label>
+            <select class="form-select" id="assignmentId" name="assignmentId" required>
+              <option value="">Chọn công trình</option>
+              <% assignments.forEach((assignment) => { %>
+                <option value="<%= assignment.assignment_id %>"><%= assignment.ten_cong_trinh || `Công trình ${assignment.cong_trinh_id}` %> · <%= assignment.khu_vuc || 'Chưa có khu vực' %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="reason">Lý do hủy</label>
+            <textarea class="form-control" id="reason" name="reason" rows="4" minlength="5" maxlength="2000" required></textarea>
+          </div>
+          <button class="btn btn-danger" type="submit" onclick="return confirm('Gửi đơn hủy phân công để Quản trị viên xem xét?');">Gửi đơn hủy</button>
+        </form>
+      <% } %>
+    </section>
+    <section>
+      <h2 class="h5 mb-3">Đơn đã gửi</h2>
+      <div class="table-frame">
+        <table class="table table-hover table-bordered align-middle">
+          <thead><tr><th>Công trình</th><th>Lý do</th><th>Ngày gửi</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <% if (requests.length === 0) { %>
+              <tr><td colspan="4" class="text-center p-4 text-secondary">Bạn chưa gửi đơn hủy nào.</td></tr>
+            <% } else { %>
+              <% requests.forEach((request) => { %>
+                <tr>
+                  <td><%= request.ten_cong_trinh || `Công trình ${request.cong_trinh_id}` %></td>
+                  <td style="white-space: normal; min-width: 260px;"><%= request.ly_do %></td>
+                  <td><%= request.ngay_tao ? new Date(request.ngay_tao).toLocaleString('vi-VN') : '—' %></td>
+                  <td>
+                    <% if (request.trang_thai === 'cho_duyet') { %>
+                      <span class="badge text-bg-warning">Chờ admin duyệt</span>
+                    <% } else { %>
+                      <span class="badge text-bg-success">Đã duyệt</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

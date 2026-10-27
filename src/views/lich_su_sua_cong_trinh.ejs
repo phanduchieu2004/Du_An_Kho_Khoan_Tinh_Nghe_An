@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %> - <%= project.ten_cong_trinh ?? `Công trình ${project.id}` %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+    .history-card { margin-top: 16px; padding: 20px; border: 1px solid #dce5e1; border-radius: 10px; background: #fff; }
+    .payloads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .payload { min-width: 0; }
+    .payload pre { max-height: 340px; overflow: auto; padding: 12px; border: 1px solid #e1e9e5; border-radius: 7px; background: #f8faf9; white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 700px) { main { padding: 22px 12px 36px; } .payloads { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+      <div>
+        <h1 class="h3 mb-1">Lịch sử sửa công trình</h1>
+        <p class="text-secondary mb-0"><%= project.ten_cong_trinh ?? `Công trình ${project.id}` %> · Mã <%= project.id %></p>
+      </div>
+      <a class="btn btn-outline-secondary" href="/cong-trinh/<%= project.id %>/chi-tiet">Quay lại công trình</a>
+    </div>
+    <% if (history.length === 0) { %>
+      <div class="alert alert-light border">Công trình chưa có lần sửa nào được duyệt.</div>
+    <% } else { %>
+      <% history.forEach((item) => { %>
+        <article class="history-card">
+          <% if (item.trang_thai === 'da_duyet') { %>
+            <h2 class="h5">Đã duyệt <%= item.ngay_xu_ly ? new Date(item.ngay_xu_ly).toLocaleString('vi-VN') : '' %></h2>
+            <p class="text-secondary small">Yêu cầu bởi <%= item.nguoi_yeu_cau %> · Duyệt bởi <%= item.nguoi_duyet || '—' %></p>
+          <% } else { %>
+            <h2 class="h5">Đang chờ duyệt</h2>
+            <p class="text-secondary small">Gửi yêu cầu lúc <%= new Date(item.ngay_tao).toLocaleString('vi-VN') %> · Người yêu cầu: <%= item.nguoi_yeu_cau %></p>
+          <% } %>
+          <div class="payloads">
+            <div class="payload">
+              <h3 class="h6">Trước khi sửa</h3>
+              <pre><%= JSON.stringify(item.du_lieu_cu, null, 2) %></pre>
+            </div>
+            <div class="payload">
+              <h3 class="h6">Dữ liệu đề xuất</h3>
+              <pre><%= JSON.stringify(item.du_lieu_de_xuat, null, 2) %></pre>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+    <% } %>
+  </main>
+</body>
+</html>

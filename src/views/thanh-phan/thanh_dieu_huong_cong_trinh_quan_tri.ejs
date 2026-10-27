@@ -1,0 +1,69 @@
+<style>
+  .project-management-subnav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 5px 30px;
+    background: #eef5f2;
+    border-bottom: 1px solid #dce8e3;
+  }
+  .project-management-subnav[hidden] { display: none; }
+  .project-management-subnav a,
+  .project-management-subnav summary {
+    display: block;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #19332e;
+    font: inherit;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .project-management-subnav a:hover,
+  .project-management-subnav summary:hover { background: #dcece5; }
+  .project-management-subnav details { position: relative; }
+  .project-management-subnav .project-import-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    z-index: 1002;
+    display: grid;
+    min-width: 220px;
+    padding: 6px;
+    border: 1px solid #dce5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 10px 28px #19332e24;
+  }
+  .project-management-subnav .project-import-menu a { padding: 10px; }
+  .project-management-subnav .project-import-menu a:hover { background: #edf5f1; }
+  @media (max-width: 850px) {
+    .project-management-subnav { overflow-x: auto; padding: 5px 16px; }
+  }
+</style>
+<nav class="project-management-subnav" aria-label="Thao tác công trình" hidden>
+  <a href="/cong-trinh/danh-sach">Danh sách công trình</a>
+  <details>
+    <summary>Nhập/Xuất dữ liệu</summary>
+    <div class="project-import-menu">
+      <a href="/cong-trinh/them">Tạo dự án mới</a>
+      <a href="/ho-khoan/them">Nhập hố khoan từ Excel</a>
+      <a href="/xuat-file/tong-hop">Xuất file tổng hợp</a>
+    </div>
+  </details>
+  <a href="/cong-trinh/cho-duyet">Duyệt công trình / mặt bằng</a>
+  <a href="/cong-trinh/phan-bo">Phân bổ</a>
+  <a href="/cong-trinh/sua-cho-duyet">Duyệt sửa công trình</a>
+  <a href="/cong-trinh/yeu-cau-huy/quan-tri">Đơn hủy phân công</a>
+  <a href="/cong-trinh/gia-han-cho-duyet">Duyệt gia hạn</a>
+</nav>
+<script>
+  const projectManagementSubnav = document.querySelector('.project-management-subnav');
+  if (projectManagementSubnav && window.location.pathname.startsWith('/cong-trinh/')) {
+    projectManagementSubnav.hidden = false;
+  }
+</script>

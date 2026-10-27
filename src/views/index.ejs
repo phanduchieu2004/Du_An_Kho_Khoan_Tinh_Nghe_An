@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Atlas — Khám phá bản đồ Việt Nam</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <style>
+    :root { --ink: #192b34; --muted: #76868d; --green: #14836e; --green-dark: #0c6d5b; --line: #e8eeed; --surface: #fff; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #e9f1ec; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #80cdb9; outline-offset: 2px; }
+    .app { height: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { height: 76px; flex: none; background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 30px; position: relative; z-index: 1001; box-shadow: 0 1px 12px #18312612; }
+    .brand { display: flex; align-items: center; gap: 11px; flex: none; text-decoration: none; color: var(--ink); }
+    .brand-icon { width: 39px; height: 39px; border-radius: 12px; background: var(--green); display: grid; place-items: center; color: white; box-shadow: 0 6px 13px #14836e37; }
+    .brand-icon svg { width: 23px; height: 23px; }
+    .brand-name { font-size: 23px; font-weight: 800; letter-spacing: -1.3px; }
+    .brand-name span { color: var(--green); }
+    .search-area { position: relative; width: min(490px, 48vw); }
+    .search { height: 44px; display: flex; align-items: center; gap: 10px; border: 1px solid #e2e9e7; background: #f8faf9; border-radius: 11px; padding: 0 6px 0 15px; transition: border-color .2s, box-shadow .2s; }
+    .search:focus-within { border-color: #7dbdab; box-shadow: 0 0 0 3px #d9f1e9; }
+    .search svg { width: 18px; height: 18px; flex: none; color: #8a9c9b; }
+    .search input { border: 0; outline: 0; background: none; flex: 1; width: 0; min-width: 0; color: var(--ink); font-size: 13px; }
+    .search input::placeholder { color: #98a8a6; }
+    .search button { border: 0; border-radius: 8px; background: var(--green); color: #fff; font-size: 12px; font-weight: 700; padding: 8px 14px; white-space: nowrap; }
+    .search button:hover { background: var(--green-dark); }
+    .search-results { display: none; position: absolute; top: calc(100% + 9px); left: 0; right: 0; max-height: min(70vh, 560px); border: 1px solid var(--line); border-radius: 13px; background: white; box-shadow: 0 15px 40px #233d3640; overflow-y: auto; }
+    .search-results.open { display: block; }
+    .search-result { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: white; padding: 12px 15px; color: var(--ink); font-size: 12px; line-height: 1.5; }
+    .search-result:hover { background: #f1f8f5; }
+    .search-info { margin: 0; padding: 15px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .search-credit { padding: 9px 15px; color: var(--muted); font-size: 10px; background: #f8faf9; }
+    .search-credit a { color: var(--green); }
+    .header-right { display: flex; align-items: center; gap: 13px; flex: none; }
+    .header-note { font-size: 12px; color: var(--muted); }
+    .topbar .profile-button { color: var(--muted); }
+    .location-button { height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .location-button:hover { background: #f4f9f7; border-color: #a9d6c9; }
+    .location-button svg { width: 17px; height: 17px; color: var(--green); }
+    .map-layout { position: relative; flex: 1; min-height: 0; }
+    #map { position: absolute; inset: 0; z-index: 1; }
+    .explore-panel { position: absolute; z-index: 500; top: 22px; left: 22px; bottom: 22px; width: 320px; display: flex; flex-direction: column; background: #fff; border: 1px solid #edf0ec; border-radius: 17px; box-shadow: 0 14px 40px #30443b2c; overflow: hidden; }
+    .panel-top { padding: 27px 23px 20px; border-bottom: 1px solid var(--line); }
+    .eyebrow { display: flex; align-items: center; gap: 7px; color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; margin: 0 0 10px; }
+    .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    h1 { font-size: 25px; line-height: 1.18; letter-spacing: -.9px; margin: 0 0 10px; }
+    .panel-top > p:last-child { font-size: 12px; line-height: 1.65; color: var(--muted); margin: 0; }
+    .panel-content { overflow-y: auto; padding: 20px 13px 16px; scrollbar-width: thin; }
+    .list-label { font-size: 10px; letter-spacing: 1.1px; font-weight: 800; color: #96a4a2; margin: 0 10px 12px; }
+    .place-list { display: grid; gap: 5px; }
+    .place { width: 100%; padding: 12px 10px; border: 1px solid transparent; border-radius: 11px; background: #fff; display: flex; gap: 11px; text-align: left; align-items: center; transition: background .2s, border-color .2s; }
+    .place:hover { background: #f6faf8; }
+    .place.active { background: #f1f8f5; border-color: #d7eae3; }
+    .place-icon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; color: var(--green); background: #e5f4ee; }
+    .place-icon svg { width: 19px; height: 19px; }
+    .place:nth-child(2) .place-icon { color: #558fbd; background: #eaf3fb; }
+    .place:nth-child(3) .place-icon { color: #c3805b; background: #faf0e8; }
+    .place:nth-child(4) .place-icon { color: #aa86b9; background: #f6edf8; }
+    .place-text { flex: 1; min-width: 0; }
+    .place-text strong { display: block; font-size: 12px; margin-bottom: 4px; }
+    .place-text small { color: var(--muted); font-size: 11px; }
+    .place-arrow { width: 17px; height: 17px; flex: none; color: #abbab4; }
+    .panel-bottom { margin-top: auto; border-top: 1px solid var(--line); padding: 15px 22px; background: #fcfdfc; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
+    .panel-bottom svg { width: 15px; height: 15px; color: var(--green); flex: none; }
+    .map-tip { position: absolute; z-index: 400; bottom: 25px; left: 360px; border: 1px solid #e8eeeb; border-radius: 9px; padding: 10px 13px; background: #fff; box-shadow: 0 4px 14px #31453c24; font-size: 11px; color: #647972; pointer-events: none; }
+    .map-tip strong { color: var(--green); }
+    .map-home-button { position: absolute; z-index: 600; top: 22px; left: 360px; width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 1px solid #e2e9e7; border-radius: 50%; background: #fff; color: var(--green); box-shadow: 0 4px 16px #263a3440; transition: background .2s, color .2s, transform .2s; }
+    .map-home-button:hover { background: var(--green); color: #fff; transform: scale(1.05); }
+    .map-home-button svg { width: 22px; height: 22px; }
+    .map-center-circle { position: absolute; z-index: 500; top: 50%; left: 50%; width: 80px; height: 80px; border: 2px solid #057362; border-radius: 50%; background: #e287511a; box-shadow: 0 0 0 1px #fff8, inset 0 0 24px #e2875120; transform: translate(-50%, -50%); pointer-events: none; }
+    .map-center-cross { position: absolute; top: 50%; left: 50%; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent; transform: translate(-50%, -50%); pointer-events: auto; cursor: crosshair; }
+    .map-center-cross::before, .map-center-cross::after { content: ""; position: absolute; top: 50%; left: 50%; border-radius: 2px; background: #d62828; box-shadow: 0 0 2px #fff; transform: translate(-50%, -50%); }
+    .map-center-cross::before { width: 12px; height: 2px; }
+    .map-center-cross::after { width: 2px; height: 12px; }
+    .map-center-circle[hidden] { display: none; }
+    .map-layout.hole-scan-active .explore-panel,
+    .map-layout.hole-scan-active .map-tip { display: none; }
+    .hole-scan-results { position: absolute; z-index: 800; top: 78px; left: 22px; width: min(500px, calc(100% - 44px)); max-height: min(58vh, 500px); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 28px #263a3440; }
+    .hole-scan-results[hidden] { display: none; }
+    .hole-scan-results-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .hole-scan-results-heading h2 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 13px; white-space: nowrap; }
+    .hole-scan-count { flex: none; color: var(--green); font-size: 12px; font-weight: 800; }
+    .hole-scan-export { flex: none; padding: 7px 10px; border: 1px solid #d7eae3; border-radius: 8px; background: #f1f8f5; color: var(--green-dark); font-size: 11px; font-weight: 700; }
+    .hole-scan-export:hover:not(:disabled) { background: #e5f4ee; }
+    .hole-scan-export:disabled { cursor: not-allowed; opacity: .5; }
+    .hole-scan-table-wrap { overflow: auto; }
+    .hole-scan-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 11px; text-align: left; }
+    .hole-scan-table th, .hole-scan-table td { padding: 9px 8px; border-right: 1px solid #dfe7e3; border-bottom: 1px solid #edf1ef; }
+    .hole-scan-table th:last-child, .hole-scan-table td:last-child { border-right: 0; }
+    .hole-scan-table th { position: sticky; top: 0; background: #f6faf8; color: #647972; font-weight: 700; }
+    .hole-scan-table td:nth-child(2) { overflow-wrap: anywhere; }
+    .hole-scan-table td:last-child, .hole-scan-table th:last-child { text-align: right; white-space: nowrap; }
+    .hole-scan-coordinate-row td { background: #f7fbf9; color: var(--green-dark); font-weight: 700; text-align: left !important; }
+    .hole-scan-name-button { padding: 0; border: 0; background: transparent; color: var(--green-dark); font: inherit; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
+    .hole-scan-name-button:hover { color: var(--green); }
+    .hole-scan-empty { padding: 14px; color: var(--muted); font-size: 12px; text-align: center; }
+    .leaflet-control-zoom { border: 0 !important; box-shadow: 0 4px 16px #263a3440 !important; overflow: hidden; border-radius: 10px !important; }
+    .leaflet-control-zoom a { width: 36px !important; height: 36px !important; line-height: 36px !important; color: var(--ink) !important; border-color: var(--line) !important; }
+    .leaflet-control-zoom a:hover { background: #f1f8f5 !important; color: var(--green) !important; }
+    .leaflet-top.leaflet-right { margin: 12px 13px 0 0; }
+    .leaflet-control-attribution { font-size: 10px !important; background: #ffffffdf !important; }
+    .leaflet-control-attribution a { color: var(--green) !important; }
+    .map-pin { width: 34px; height: 34px; position: relative; display: grid; place-items: center; border-radius: 50% 50% 50% 5px; background: var(--green); border: 3px solid #fff; box-shadow: 0 3px 13px #172c2c60; transform: rotate(-45deg); }
+    .map-pin span { display: block; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+    .map-pin.selected { background: #e28751; }
+    .map-pin.user { background: #4488d3; }
+    .borehole-pin { width: 38px; height: 38px; display: grid; place-items: center; border: 3px solid #fff; border-radius: 50% 50% 50% 5px; background: #e28751; box-shadow: 0 3px 13px #172c2c60; transform: rotate(-45deg); }
+    .borehole-pin svg { width: 21px; height: 21px; transform: rotate(45deg); color: #fff; }
+    .popup-title { margin: 0 0 4px; font-weight: 800; color: var(--ink); font-size: 13px; }
+    .popup-description { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+    .mat-bang-popup-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .mat-bang-popup-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+    .mat-bang-hole-button { width: 32px; height: 32px; display: grid; place-items: center; flex: none; padding: 0; border: 1px solid #d7eae3; border-radius: 8px; background: #f1f8f5; color: var(--green); }
+    .mat-bang-hole-button:hover { background: #e5f4ee; }
+    .mat-bang-hole-button:disabled { cursor: wait; opacity: .6; }
+    .mat-bang-hole-button svg { width: 19px; height: 19px; }
+    .mat-bang-detail-button { width: 32px; height: 32px; display: grid; place-items: center; flex: none; padding: 0; border: 1px solid #d7eae3; border-radius: 8px; background: #f1f8f5; color: var(--green); }
+    .mat-bang-detail-button:hover { background: #e5f4ee; }
+    .mat-bang-detail-button svg { width: 19px; height: 19px; }
+    .mat-bang-level-button { display: block; margin-top: 8px; padding: 6px 10px; border: 1px solid #b8dec6; border-radius: 7px; background: #effaf2; color: #16733e; font-size: 11px; font-weight: 700; }
+    .mat-bang-level-button:hover { background: #dcf5e3; }
+    .mat-bang-level-button:disabled { cursor: wait; opacity: .6; }
+    .mat-bang-hole-status { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+    .mat-bang-detail-overlay { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 20px; background: #10231f80; }
+    .mat-bang-detail-overlay[hidden] { display: none; }
+    .mat-bang-detail-dialog { width: min(560px, 100%); max-height: min(80vh, 700px); overflow: auto; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px #10231f55; }
+    .mat-bang-detail-heading { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: #fff; }
+    .mat-bang-detail-title { margin: 0; font-size: 17px; }
+    .mat-bang-detail-close { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); }
+    .mat-bang-detail-close:hover { background: #f4f9f7; }
+    .mat-bang-detail-close svg { width: 18px; height: 18px; }
+    .mat-bang-detail-content { padding: 18px 20px 20px; }
+    .mat-bang-detail-list { display: grid; grid-template-columns: minmax(130px, .8fr) 1.2fr; gap: 10px 16px; margin: 0; font-size: 13px; }
+    .mat-bang-detail-list dt { color: var(--muted); }
+    .mat-bang-detail-list dd { margin: 0; overflow-wrap: anywhere; }
+    .mat-bang-detail-section-title { margin: 22px 0 8px; font-size: 13px; }
+    .mat-bang-detail-coordinates { max-height: 230px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #f8faf9; color: var(--ink); font: 11px/1.6 Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .toast { position: absolute; bottom: 25px; left: 50%; z-index: 900; transform: translate(-50%, 12px); opacity: 0; pointer-events: none; background: #1f3733; color: #fff; border-radius: 9px; padding: 11px 16px; box-shadow: 0 8px 20px #263a3440; font-size: 12px; transition: opacity .2s, transform .2s; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 850px) {
+      .topbar { padding: 0 16px; gap: 12px; }
+      .header-note { display: none; }
+      .search-area { width: auto; flex: 1; }
+      .explore-panel { width: 280px; }
+      .map-tip { left: 318px; }
+      .map-home-button { left: 318px; }
+    }
+    /* nút chức năng */
+    .topbar{
+    background:#057362 !important;
+    color:#fff;
+}
+
+.brand{
+    color:#fff !important;
+}
+
+.brand-icon{
+    background:transparent !important;
+    box-shadow:none !important;
+    font-size:38px;
+}
+
+.brand-name{
+    font-size:22px;
+    color:#0047cc;
+    font-weight:700;
+}
+
+.brand-name span{
+    color:#00a651;
+}
+
+.menu-bar{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    flex:1;
+    margin-left:30px;
+}
+
+.menu-item{
+    position:relative;
+}
+
+.menu-btn{
+    border:none;
+    background:transparent;
+    color:#fff;
+    padding:12px 14px;
+    font-size:14px;
+    cursor:pointer;
+    letter-spacing:1px;
+}
+
+.menu-btn:hover{
+    background:rgba(255,255,255,0.15);
+    border-radius:4px;
+}
+
+.submenu{
+    display:none;
+    position:absolute;
+    top:100%;
+    left:0;
+    min-width:220px;
+    background:#fff;
+    border-radius:0 0 8px 8px;
+    box-shadow:0 5px 15px rgba(0,0,0,.2);
+    z-index:9999;
+}
+
+.submenu button{
+    width:100%;
+    text-align:left;
+    padding:12px;
+    border:none;
+    background:#fff;
+    color:#333;
+    cursor:pointer;
+}
+
+.submenu button:hover{
+    background:#f3f3f3;
+}
+
+.submenu.show{
+    display:block;
+}
+
+/* Thanh công cụ bên phải */
+
+.map-tools {
+    position: absolute;
+    top: 120px; /* nằm dưới zoom */
+    right: 13px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+/* nút chọn địa điểm */
+/* .circle-tool {
+    position: absolute;
+    top: 340px;
+    right: 13px;
+    width: 42px;
+    height: 42px;
+    border: 2px solid #ff5a1f;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    z-index: 999;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+.circle-tool:hover{
+    background:#fff4ef;
+} */
+
+.tool-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    cursor: pointer;
+    font-size: 18px;
+    transition: .2s;
+}
+
+.tool-btn:hover {
+    background: #14836e;
+    color: white;
+    transform: scale(1.05);
+}
+
+.tool-btn[aria-pressed="true"] {
+    background: #057362;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(5, 115, 98, .2), 0 4px 16px rgba(0,0,0,.18);
+}
+
+    @media (max-width: 650px) {
+      .topbar { height: 64px; }
+      .brand { gap: 0; }
+      .brand-name { display: none; }
+      .brand-icon { width: 35px; height: 35px; border-radius: 10px; }
+      .search { height: 38px; padding-left: 10px; gap: 5px; }
+      .search input { font-size: 12px; }
+      .search button { padding: 7px 9px; font-size: 11px; }
+      .location-button { width: 38px; height: 38px; justify-content: center; padding: 0; }
+      .location-button span { display: none; }
+      .map-center-circle { width: min(420px, calc(100vw - 28px)); height: min(420px, calc(100vw - 28px)); }
+      .hole-scan-results { top: 64px; left: 12px; width: min(360px, calc(100% - 24px)); max-height: 34vh; }
+      .hole-scan-results-heading { gap: 6px; padding: 8px; }
+      .hole-scan-results-heading h2 { font-size: 11px; }
+      .hole-scan-count { font-size: 11px; }
+      .hole-scan-export { padding: 6px 7px; font-size: 10px; }
+      .explore-panel { top: auto; left: 12px; right: 12px; bottom: 13px; width: auto; max-height: min(257px, 42vh); border-radius: 14px; }
+      .map-home-button { top: 13px; left: 13px; }
+      .panel-top { padding: 13px 17px 9px; }
+      .eyebrow { margin-bottom: 3px; font-size: 9px; }
+      h1 { font-size: 17px; margin-bottom: 0; }
+      .panel-top > p:last-child, .panel-bottom { display: none; }
+      .panel-content { padding: 9px 11px 12px; }
+      .list-label { margin-bottom: 3px; }
+      .place-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
+      .place { padding: 8px 5px; gap: 7px; }
+      .place-icon { width: 29px; height: 29px; border-radius: 8px; }
+      .place-icon svg { width: 15px; height: 15px; }
+      .place-text strong { font-size: 11px; margin: 0; }
+      .place-text small, .place-arrow, .map-tip { display: none; }
+      .toast { bottom: min(280px, calc(42vh + 35px)); font-size: 11px; }
+      .leaflet-bottom.leaflet-right { bottom: min(274px, calc(42vh + 30px)); }
+    }
+  </style>
+</head>
+
+<body data-user-role="<%= currentUser?.role || '' %>" data-has-assigned-area="<%= Boolean(currentUser?.assignedArea) %>" data-enabled-permissions="<%= JSON.stringify(enabledPermissionIds) %>">
+  <div class="app">
+    <header class="topbar">
+      <!-- <a class="brand" href="map.html" aria-label="Atlas - Trang bản đồ"><span class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2V5ZM9 3v16M15 5v16"/><path d="m11.5 10 1.5 3 1.5-3"/></svg></span><span class="brand-name">at<span>las.</span></span></a> -->
+      <div class="search-area"><form class="search" id="searchForm" role="search" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien" data-system-permission="kham-pha-ban-do"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="searchInput" type="search" aria-label="Tìm địa điểm hoặc tọa độ WGS84" placeholder="Địa chỉ, du lịch Đà Nẵng hoặc vĩ độ, kinh độ..." autocomplete="off" /><button type="submit">Tìm kiếm</button></form><div class="search-results" id="searchResults" aria-live="polite" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien"></div></div>
+      <div class="header-right"><span class="header-note"></span><button class="location-button" id="locateButton" type="button" title="Xác định vị trí của tôi" aria-label="Xác định vị trí của tôi" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien" data-system-permission="kham-pha-ban-do"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg><span>Vị trí của tôi</span></button></div>
+   
+    <div class="menu-bar">
+      <% if (currentUser?.role === 'quan-tri-vien' || currentUser?.role === 'ky-su') { %>
+        <button class="menu-btn" type="button" onclick="window.location.href='/'">Bản đồ</button>
+        <button class="menu-btn" type="button" onclick="window.location.href='/cong-trinh/danh-sach'">Quản lý công trình</button>
+        <% if (currentUser.role === 'ky-su') { %>
+          <button class="menu-btn" type="button" onclick="window.location.href='/ho-tro'">Hỗ trợ</button>
+          <div class="menu-item">
+            <button class="menu-btn" type="button">Nhập và xuất dữ liệu</button>
+            <div class="submenu">
+              <button type="button" onclick="window.location.href='/cong-trinh/them'">Tạo dự án mới</button>
+              <button type="button" onclick="window.location.href='/ho-khoan/them'">Thêm hố khoan từ Excel</button>
+              <button type="button" onclick="window.location.href='/xuat-file/tong-hop'">Xuất file tổng hợp</button>
+            </div>
+          </div>
+        <% } else { %>
+          <button class="menu-btn" type="button" onclick="window.location.href='/nguoi-dung'">Quản lý người dùng</button>
+        <% } %>
+      <% } else { %>
+
+        <div class="menu-item">
+            <button class="menu-btn">Bản đồ của tôi</button>
+            <div class="submenu">
+                <button data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien">Bản đồ nền</button>
+                <button data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien">Lớp dữ liệu</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Quản lý bản đồ</button>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <button class="menu-btn">Tải lên ▼</button>
+            <div class="submenu">
+                <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/cong-trinh/them'">Tạo dự án mới</button>
+                <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/ho-khoan/them'">Thêm hố khoan vào dự án</button>
+                <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/xuat-file/tong-hop'">Excel</button>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <button class="menu-btn">Yêu cầu</button>
+            <div class="submenu">
+                <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/cong-trinh'">Yêu cầu dữ liệu</button>
+                <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/ho-khoan'">Báo cáo</button>
+              <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/lop-dat'">Lớp đất</button>
+              <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/mau-thi-nghiem'">Mẫu thí nghiệm</button>
+              <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/thanh-phan-hat'">Thành phần hạt</button>
+              <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/cat-phang'">Cắt phẳng</button>
+              <button data-required-roles="ky-su,quan-tri-vien" onclick="window.location.href='/gia-tri-trung-binh-lop'">Giá trị trung bình lớp</button>
+              <button data-required-roles="quan-tri-vien" onclick="window.location.href='/nguoi-dung'">Người dùng</button>
+              <button data-required-roles="quan-tri-vien" onclick="window.location.href='/vai-tro'">Vai trò</button>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <button class="menu-btn">Section</button>
+            <div class="submenu">
+                <button data-required-roles="ky-su,quan-tri-vien">Địa chất</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Địa hình</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Thủy văn</button>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <button class="menu-btn">GeoData Soft</button>
+            <div class="submenu">
+                <button data-required-roles="ky-su,quan-tri-vien">Dự án</button>
+                <button data-required-roles="quan-tri-vien" onclick="window.location.href='/nguoi-dung'">Nhân sự</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Thống kê</button>
+            </div>
+        </div>
+
+        <div class="menu-item">
+            <button class="menu-btn">3D Model</button>
+            <div class="submenu">
+                <button data-required-roles="ky-su,quan-tri-vien">Hố khoan 3D</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Mặt cắt 3D</button>
+                <button data-required-roles="ky-su,quan-tri-vien">Địa hình 3D</button>
+            </div>
+        </div>
+
+      <% } %>
+    </div>
+
+    <div class="header-right">
+        <%- include('thanh-phan/nut_ho_so') %>
+        <% if (currentUser) { %>
+        <form action="/dang-xuat" method="post">
+            <button class="location-button" type="submit">Đăng xuất</button>
+        </form>
+        <% } else { %>
+        <a class="location-button" href="/dang-nhap" style="text-decoration:none">Đăng nhập</a>
+        <% } %>
+    </div>
+
+</header>
+<%- include('thanh-phan/nut_uy_quyen') %>
+    <main class="map-layout" aria-label="Bản đồ OpenStreetMap">
+
+<div class="map-tools">
+
+    <button class="tool-btn" id="btnCongTrinh" title="Bật/tắt lớp mặt bằng" aria-pressed="false" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien" data-system-permission="cong-trinh">
+        🏗️
+    </button>
+
+    <button class="tool-btn" id="btnHoKhoan" title="Hiện/ẩn tất cả hố khoan" aria-pressed="false" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien" data-system-permission="ho-khoan">
+        📍
+    </button>
+
+    <button class="tool-btn" id="btnLopDat" title="Lớp đất" data-required-roles="ky-su,quan-tri-vien" data-system-permission="lop-dat">
+        🌍
+    </button>
+
+    <button class="tool-btn" id="btnMauTN" title="Mẫu thí nghiệm" data-required-roles="ky-su,quan-tri-vien" data-system-permission="mau-thi-nghiem">
+        🧪
+    </button>
+
+    <button class="tool-btn" id="btnXuatTongHop" type="button" title="Xuất file tổng hợp Excel" aria-label="Xuất file tổng hợp Excel" data-required-roles="ky-su,quan-tri-vien" data-system-permission="xuat-du-lieu">
+        📥
+    </button>
+
+</div>
+
+      <div id="map" aria-label="Bản đồ Việt Nam"></div>
+<button
+  class="map-home-button"
+  id="mapHomeButton"
+  type="button"
+  title="Quét hố khoan trong bán kính 5 km quanh tâm"
+  aria-label="Quét hố khoan trong bán kính 5 km quanh tâm"
+  aria-pressed="false"
+  data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien"
+  data-system-permission="kham-pha-ban-do"
+>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="7" />
+    <circle cx="12" cy="12" r="2" />
+    <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+  </svg>
+</button>
+<div class="map-center-circle" id="mapCenterCircle" hidden>
+  <button class="map-center-cross" id="mapCenterCross" type="button" title="Quét hố khoan trong bán kính 5 km quanh tâm" aria-label="Quét hố khoan trong bán kính 5 km quanh tâm" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien" data-system-permission="kham-pha-ban-do"></button>
+</div>
+<section class="hole-scan-results" id="holeScanResults" aria-labelledby="holeScanResultsTitle" aria-live="polite" hidden>
+  <div class="hole-scan-results-heading">
+    <h2 id="holeScanResultsTitle">Hố khoan trong phạm vi 5 km</h2>
+    <span class="hole-scan-count" id="holeScanCount">0 hố</span>
+    <button class="hole-scan-export" id="holeScanExport" type="button" disabled data-required-roles="ky-su,quan-tri-vien" data-system-permission="xuat-du-lieu">Xuất file</button>
+  </div>
+  <div class="hole-scan-table-wrap">
+    <table class="hole-scan-table">
+      <colgroup>
+        <col style="width: 22%">
+        <col style="width: 52%">
+        <col style="width: 26%">
+      </colgroup>
+      <thead>
+        <tr class="hole-scan-coordinate-row">
+          <td colspan="3"><span>Tọa độ ghim (WGS84):</span> <span id="holeScanPinnedCoordinates">Chưa quét</span></td>
+        </tr>
+        <tr><th>Tên hố khoan</th><th>Tên công trình</th><th>Khoảng cách</th></tr>
+      </thead>
+      <tbody id="holeScanResultsBody"></tbody>
+    </table>
+    <p class="hole-scan-empty" id="holeScanEmpty" hidden>Chưa tìm thấy hố khoan trong phạm vi 5 km.</p>
+  </div>
+</section>
+<!-- <button
+    id="btnPolygon"
+    class="circle-tool"
+    title="Hiển thị công trình">
+</button> -->
+      <aside class="explore-panel" aria-labelledby="panelTitle"><div class="panel-top"><p class="eyebrow">BẢN ĐỒ KHÁM PHÁ</p><h1 id="panelTitle">Việt Nam trong tầm mắt.</h1><p>Khám phá những điểm đến nổi bật hoặc tìm bất kỳ địa điểm nào bạn muốn.</p></div><div class="panel-content"><p class="list-label">ĐỊA ĐIỂM GỢI Ý</p>      <div class="place-list" id="placeList" data-required-roles="nguoi-xem-ban-do,ky-su,quan-tri-vien"></div></div><div class="panel-bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Nhấp vào địa điểm để khám phá trên bản đồ.</div></aside>
+      <div class="map-tip">Bản đồ bởi <strong>OpenStreetMap</strong> · Kéo để di chuyển, cuộn để thu phóng</div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.2.0/turf.min.js"></script>
+  <script>
+    const places = [
+      { name: 'Hà Nội', detail: 'Thủ đô · Miền Bắc', description: 'Thủ đô ngàn năm văn hiến của Việt Nam.', lat: 21.0285, lng: 105.8542, zoom: 13 },
+      { name: 'Đà Nẵng', detail: 'Thành phố biển · Miền Trung', description: 'Thành phố ven biển với những cây cầu nổi tiếng.', lat: 16.0544, lng: 108.2022, zoom: 13 },
+      { name: 'TP. Hồ Chí Minh', detail: 'Đô thị sôi động · Miền Nam', description: 'Trung tâm kinh tế năng động của Việt Nam.', lat: 10.8231, lng: 106.6297, zoom: 13 },
+      { name: 'Hội An', detail: 'Phố cổ · Quảng Nam', description: 'Di sản văn hóa với những con phố rực rỡ ánh đèn.', lat: 15.8801, lng: 108.3380, zoom: 15 }
+    ];
+
+    const initialMapCenter = [16.15, 106.15];
+    const initialMapZoom = 6;
+    const map = L.map('map', { zoomControl: false }).setView(initialMapCenter, initialMapZoom);
+    let hoKhoanMarkers = [];
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    L.control.zoom({ position: 'topright', zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ' }).addTo(map);
+    const mapHomeButton = document.getElementById('mapHomeButton');
+    const mapCenterMarker = document.getElementById('mapCenterCircle');
+    const mapCenterCross = document.getElementById('mapCenterCross');
+    const mapLayout = document.querySelector('.map-layout');
+    const holeScanResults = document.getElementById('holeScanResults');
+    const holeScanCount = document.getElementById('holeScanCount');
+    const holeScanResultsBody = document.getElementById('holeScanResultsBody');
+    const holeScanPinnedCoordinates = document.getElementById('holeScanPinnedCoordinates');
+    const holeScanEmpty = document.getElementById('holeScanEmpty');
+    const holeScanExport = document.getElementById('holeScanExport');
+    const holeScanRadius = 5000;
+    const holeScanLayer = L.layerGroup();
+    let holeScanData = null;
+    let holeScanEnabled = false;
+
+    function updateHoleScan(announce = false) {
+      if (!holeScanEnabled || !holeScanData) return;
+
+      const center = map.getCenter();
+      holeScanLayer.clearLayers();
+      holeScanResultsBody.replaceChildren();
+      holeScanPinnedCoordinates.textContent =
+        `${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
+      const nearbyHoles = [];
+
+      holeScanData.forEach(hole => {
+        if (
+          !hole || hole.latitude == null || hole.longitude == null ||
+          hole.latitude === '' || hole.longitude === ''
+        ) return;
+
+        const latitude = Number(hole.latitude);
+        const longitude = Number(hole.longitude);
+        if (
+          !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+          latitude < -90 || latitude > 90 ||
+          longitude < -180 || longitude > 180
+        ) return;
+
+        const distance = map.distance(center, L.latLng(latitude, longitude));
+        if (distance > holeScanRadius) return;
+
+        const marker = L.marker([latitude, longitude], {
+          icon: window.createBoreholeIcon()
+        });
+        const popup = document.createElement('div');
+        const title = document.createElement('strong');
+        const project = document.createElement('div');
+        title.textContent = hole.ma_ho_khoan || `Hố khoan ${hole.id}`;
+        project.textContent = `Công trình: ${hole.ten_cong_trinh || `Công trình ${hole.cong_trinh_id}`}`;
+        popup.append(title, document.createElement('br'), project);
+        marker.bindPopup(popup, { autoPan: false });
+        holeScanLayer.addLayer(marker);
+        nearbyHoles.push({
+          hole,
+          distance,
+          name: hole.ma_ho_khoan || `Hố khoan ${hole.id}`,
+          marker,
+          location: L.latLng(latitude, longitude)
+        });
+      });
+
+      nearbyHoles.sort((first, second) => first.distance - second.distance);
+      nearbyHoles.forEach(({ hole, distance, name, marker, location }) => {
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        const projectCell = document.createElement('td');
+        const distanceCell = document.createElement('td');
+        const nameButton = document.createElement('button');
+        nameButton.type = 'button';
+        nameButton.className = 'hole-scan-name-button';
+        nameButton.textContent = name;
+        nameButton.setAttribute('aria-label', `Đưa bản đồ đến ${name}`);
+        nameButton.addEventListener('click', () => {
+          const zoom = Math.max(map.getZoom(), 16);
+          if (map.getCenter().equals(location) && map.getZoom() === zoom) {
+            marker.openPopup();
+            return;
+          }
+          map.once('moveend', () => marker.openPopup());
+          map.flyTo(location, zoom, { duration: 1 });
+        });
+        nameCell.append(nameButton);
+        projectCell.textContent = hole.ten_cong_trinh || (
+          hole.cong_trinh_id == null
+            ? '—'
+            : `Công trình ${hole.cong_trinh_id}`
+        );
+        distanceCell.textContent = `${(distance / 1000).toLocaleString('vi-VN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })} km`;
+        row.append(nameCell, projectCell, distanceCell);
+        holeScanResultsBody.append(row);
+      });
+
+      holeScanCount.textContent = `${nearbyHoles.length} hố`;
+      holeScanExport.disabled = nearbyHoles.length === 0;
+      holeScanEmpty.hidden = nearbyHoles.length > 0;
+      const status = `Đang quét bán kính 5 km: tìm thấy ${nearbyHoles.length} hố khoan`;
+      mapHomeButton.title = status;
+      mapHomeButton.setAttribute('aria-label', status);
+      if (announce) showToast(`${status}.`);
+    }
+
+    function stopHoleScan() {
+      holeScanEnabled = false;
+      mapLayout.classList.remove('hole-scan-active');
+      mapCenterMarker.hidden = true;
+      holeScanResults.hidden = true;
+      holeScanLayer.clearLayers();
+      map.removeLayer(holeScanLayer);
+      holeScanResultsBody.replaceChildren();
+      holeScanPinnedCoordinates.textContent = 'Chưa quét';
+      holeScanCount.textContent = '0 hố';
+      holeScanExport.disabled = true;
+      holeScanEmpty.hidden = true;
+      mapHomeButton.title = 'Quét hố khoan trong bán kính 5 km quanh tâm';
+      mapHomeButton.setAttribute(
+        'aria-label',
+        'Quét hố khoan trong bán kính 5 km quanh tâm'
+      );
+      mapHomeButton.setAttribute('aria-pressed', 'false');
+    }
+
+    window.hideHoleScan = stopHoleScan;
+    mapHomeButton.addEventListener('click', async () => {
+      mapHomeButton.disabled = true;
+      try {
+        if (holeScanEnabled) {
+          stopHoleScan();
+          showToast('Đã tắt tâm quét hố khoan.');
+          return;
+        }
+
+        holeScanEnabled = true;
+        mapLayout.classList.add('hole-scan-active');
+        mapCenterMarker.hidden = false;
+        mapHomeButton.setAttribute('aria-pressed', 'true');
+        showToast('Nhấn dấu + ở tâm bản đồ để quét hố khoan trong 5 km.');
+      } catch (error) {
+        console.error('Không thể bật tâm quét hố khoan:', error);
+        stopHoleScan();
+        showToast('Không thể bật tâm quét. Vui lòng thử lại.');
+      } finally {
+        mapHomeButton.disabled = false;
+      }
+    });
+
+    mapCenterCross.addEventListener('click', async () => {
+      if (!holeScanEnabled) return;
+
+      mapCenterCross.disabled = true;
+      try {
+        if (!holeScanData) {
+          const response = await fetch('/ho-khoan/api');
+          if (!response.ok) {
+            throw new Error(`API hố khoan trả về HTTP ${response.status}`);
+          }
+          const data = await response.json();
+          if (!Array.isArray(data)) {
+            throw new Error('Dữ liệu hố khoan không hợp lệ.');
+          }
+          holeScanData = data;
+        }
+
+        holeScanResults.hidden = false;
+        holeScanLayer.addTo(map);
+        updateHoleScan(true);
+      } catch (error) {
+        console.error('Không thể quét hố khoan quanh tâm bản đồ:', error);
+        holeScanResults.hidden = true;
+        holeScanLayer.clearLayers();
+        map.removeLayer(holeScanLayer);
+        showToast('Không thể quét hố khoan. Vui lòng thử lại.');
+      } finally {
+        mapCenterCross.disabled = false;
+      }
+    });
+
+    holeScanExport.addEventListener('click', () => {
+      const rows = [
+        ['Tọa độ ghim (WGS84)', holeScanPinnedCoordinates.textContent, ''],
+        ['Tên hố khoan', 'Tên công trình', 'Khoảng cách từ tâm +'],
+        ...Array.from(holeScanResultsBody.rows, row =>
+          Array.from(row.cells, cell => cell.textContent.trim())
+        )
+      ];
+      const escapeCsvCell = value => {
+        const safeValue = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+        return `"${safeValue.replace(/"/g, '""')}"`;
+      };
+      const csv = '\uFEFF' + rows
+        .map(row => row.map(escapeCsvCell).join(';'))
+        .join('\r\n');
+      const fileUrl = URL.createObjectURL(
+        new Blob([csv], { type: 'text/csv;charset=utf-8' })
+      );
+      const downloadLink = document.createElement('a');
+      downloadLink.href = fileUrl;
+      downloadLink.download = 'ho-khoan-trong-ban-kinh-5km.csv';
+      downloadLink.click();
+      setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+      showToast('Đã xuất danh sách hố khoan ra file CSV.');
+    });
+
+    function pinIcon(type = '') {
+      return L.divIcon({ className: '', html: `<div class="map-pin ${type}"><span></span></div>`, iconSize: [34, 40], iconAnchor: [17, 36], popupAnchor: [0, -36] });
+    }
+    window.createBoreholeIcon = function () {
+      return L.divIcon({
+        className: '',
+        html: '<div class="borehole-pin" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+          'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M12 3 6.5 20h11L12 3Z"/>' +
+          '<path d="M9 12h6M8 16h8M12 7v13M5 21h14"/>' +
+          '</svg></div>',
+        iconSize: [38, 44],
+        iconAnchor: [19, 40],
+        popupAnchor: [0, -40]
+      });
+    };
+    function popupContent(title, detail) {
+      const container = document.createElement('div');
+      const heading = document.createElement('p');
+      const description = document.createElement('p');
+      heading.className = 'popup-title'; description.className = 'popup-description';
+      heading.textContent = title; description.textContent = detail;
+      container.append(heading, description);
+      return container;
+    }
+    const placeList = document.getElementById('placeList');
+    const placeMarkers = places.map((place, index) => {
+      const marker = L.marker([place.lat, place.lng], { icon: pinIcon() }).addTo(map).bindPopup(popupContent(place.name, place.description));
+      const button = document.createElement('button');
+      button.className = 'place'; button.type = 'button';
+      button.innerHTML = '<span class="place-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></span><span class="place-text"><strong></strong><small></small></span><svg class="place-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>';
+      button.querySelector('strong').textContent = place.name;
+      button.querySelector('small').textContent = place.detail;
+      button.addEventListener('click', () => selectPlace(index));
+      marker.on('click', () => selectPlace(index, false));
+      placeList.append(button);
+      return marker;
+    });
+    function selectPlace(index, fly = true) {
+      document.querySelectorAll('.place').forEach((button, i) => button.classList.toggle('active', i === index));
+      placeMarkers.forEach((marker, i) => marker.setIcon(pinIcon(i === index ? 'selected' : '')));
+      const place = places[index];
+      if (fly) map.flyTo([place.lat, place.lng], place.zoom, { duration: 1.2 });
+      setTimeout(() => placeMarkers[index].openPopup(), fly ? 1100 : 0);
+    }
+
+    let toastTimer;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message; toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
+    }
+    let assignedAreaLayer;
+    let assignedAreaPin;
+    async function focusAssignedArea() {
+      if (document.body.dataset.userRole !== 'ky-su') return;
+      try {
+        if (document.body.dataset.hasAssignedArea !== 'true') return;
+        const response = await fetch('/nguoi-dung/khu-vuc-phan-cong');
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(
+            result?.message || `Không tải được khu vực được giao (HTTP ${response.status}).`
+          );
+        }
+        const result = await response.json();
+        const bounds = result.bounds;
+        if (!bounds) {
+          throw new Error('Máy chủ không trả về ranh giới khu vực được giao.');
+        }
+        const coordinates = [bounds.south, bounds.north, bounds.west, bounds.east];
+        if (!coordinates.every(Number.isFinite)) {
+          throw new Error('Ranh giới khu vực được giao không hợp lệ.');
+        }
+        const assignedBounds = [
+          [bounds.south, bounds.west],
+          [bounds.north, bounds.east]
+        ];
+        if (assignedAreaLayer) map.removeLayer(assignedAreaLayer);
+        const boundaryStyle = {
+          color: '#d62828',
+          weight: 3,
+          opacity: 0.95,
+          fillColor: '#ef4444',
+          fillOpacity: 0.06
+        };
+        assignedAreaLayer = bounds.geometry
+          ? L.geoJSON({
+              type: 'Feature',
+              properties: { name: result.area },
+              geometry: bounds.geometry
+            }, { style: boundaryStyle }).addTo(map)
+          : L.rectangle(assignedBounds, boundaryStyle).addTo(map);
+        const displayBounds = assignedAreaLayer.getBounds();
+        if (!displayBounds.isValid()) {
+          throw new Error('Ranh giới khu vực được phân công không hợp lệ.');
+        }
+        if (assignedAreaPin) map.removeLayer(assignedAreaPin);
+        if (
+          Number.isFinite(result.center?.latitude) &&
+          Number.isFinite(result.center?.longitude)
+        ) {
+          const pinPopup = document.createElement('div');
+          const pinTitle = document.createElement('strong');
+          const pinDescription = document.createElement('div');
+          pinTitle.textContent = result.area;
+          pinDescription.textContent = result.center.isPinned
+            ? 'Vị trí đã ghim khi phân công'
+            : 'Tâm khu vực; chưa lưu tọa độ ghim riêng';
+          pinPopup.append(pinTitle, pinDescription);
+          assignedAreaPin = L.marker([
+            result.center.latitude,
+            result.center.longitude
+          ]).addTo(map).bindPopup(pinPopup);
+        }
+        map.fitBounds(displayBounds, { maxZoom: 16, padding: [35, 35] });
+        await showAssignedMapLayers(displayBounds);
+      } catch (error) {
+        console.error('Không thể tải khu vực được giao:', error);
+        showToast(error.message || 'Không thể hiển thị dữ liệu khu vực được giao.');
+      }
+    }
+    async function showAssignedMapLayers(bounds) {
+      try {
+        const projectButton = document.getElementById('btnCongTrinh');
+        if (projectButton && projectButton.getAttribute('aria-pressed') !== 'true') {
+          const visible = await window.toggleMatBang();
+          projectButton.setAttribute('aria-pressed', String(visible));
+        }
+      } catch (error) {
+        console.error('Không thể hiển thị mặt bằng trong khu vực được giao:', error);
+        showToast(error.message || 'Không tải được lớp mặt bằng trong khu vực được giao.');
+      }
+      try {
+        if (!hoKhoanVisible) {
+          await hienThiHoKhoan();
+          hoKhoanVisible = true;
+          document.getElementById('btnHoKhoan')
+            ?.setAttribute('aria-pressed', 'true');
+        }
+      } catch (error) {
+        console.error('Không thể hiển thị hố khoan trong khu vực được giao:', error);
+        showToast(error.message || 'Không tải được lớp hố khoan trong khu vực được giao.');
+      }
+      map.fitBounds(bounds, { maxZoom: 16, padding: [35, 35] });
+    }
+    let userMarker;
+    let accuracyCircle;
+    document.getElementById('locateButton').addEventListener('click', () => {
+      if (!navigator.geolocation) { showToast('Trình duyệt này không hỗ trợ định vị.'); return; }
+      showToast('Đang xác định vị trí của bạn...');
+      map.locate({ setView: true, maxZoom: 15, enableHighAccuracy: true, timeout: 12000 });
+    });
+    map.on('locationfound', event => {
+      if (userMarker) map.removeLayer(userMarker);
+      if (accuracyCircle) map.removeLayer(accuracyCircle);
+      userMarker = L.marker(event.latlng, { icon: pinIcon('user') }).addTo(map).bindPopup(popupContent('Vị trí của bạn', 'Vị trí gần đúng dựa trên thiết bị của bạn.')).openPopup();
+      accuracyCircle = L.circle(event.latlng, { radius: event.accuracy, color: '#4488d3', fillColor: '#4488d3', fillOpacity: .1, weight: 1 }).addTo(map);
+      showToast('Đã tìm thấy vị trí của bạn.');
+    });
+    map.on('locationerror', () => showToast('Không thể xác định vị trí. Hãy kiểm tra quyền truy cập vị trí.'));
+
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+    const resultsBox = document.getElementById('searchResults');
+    let searchMarker;
+    let searchBoundary;
+    let searchBoundaryGeometry = null;
+    const tourismLayer = L.layerGroup();
+    const maxTourismResults = 200;
+    let searchController;
+    let vietnamLandMaskPromise;
+    let searchSelectionId = 0;
+    let lastSearchAt = 0;
+    async function getVietnamLandMask() {
+      if (!vietnamLandMaskPromise) {
+        vietnamLandMaskPromise = fetch('/du-lieu/ranh-gioi-viet-nam.geojson')
+          .then(response => {
+            if (!response.ok) throw new Error(`Không tải được dữ liệu đất liền Việt Nam (HTTP ${response.status}).`);
+            return response.json();
+          })
+          .then(geometry => {
+            if (!geometry || geometry.type !== 'MultiPolygon' || !Array.isArray(geometry.coordinates)) {
+              throw new Error('Dữ liệu đất liền Việt Nam không hợp lệ.');
+            }
+            return geometry;
+          });
+      }
+      return vietnamLandMaskPromise;
+    }
+    function isAreaGeometry(geometry) {
+      return geometry &&
+        (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') &&
+        Array.isArray(geometry.coordinates) &&
+        geometry.coordinates.length > 0;
+    }
+    function searchPopupContent(result, latitude, longitude) {
+      const container = document.createElement('div');
+      const heading = document.createElement('div');
+      const title = document.createElement('strong');
+      const actions = document.createElement('div');
+      const detailsButton = document.createElement('button');
+      const description = document.createElement('p');
+      heading.className = 'mat-bang-popup-heading';
+      title.className = 'popup-title';
+      title.textContent = result.name || result.display_name.split(',')[0];
+      actions.className = 'mat-bang-popup-actions';
+      detailsButton.type = 'button';
+      detailsButton.className = 'mat-bang-detail-button';
+      detailsButton.title = 'Xem chi tiết địa điểm';
+      detailsButton.setAttribute('aria-label', 'Xem chi tiết địa điểm');
+      detailsButton.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/>' +
+        '<circle cx="12" cy="12" r="3"/></svg>';
+      detailsButton.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof window.showSearchLocationDetails !== 'function') {
+          console.error('Chưa tải được chức năng xem chi tiết địa điểm.');
+          showToast('Không thể mở thông tin địa điểm lúc này.');
+          return;
+        }
+        window.showSearchLocationDetails(
+          result,
+          latitude,
+          longitude,
+          searchBoundaryGeometry,
+          detailsButton
+        );
+      });
+      description.className = 'popup-description';
+      description.textContent = result.display_name;
+      actions.append(detailsButton);
+      heading.append(title, actions);
+      container.append(heading, description);
+      return container;
+    }
+    function resultMessage(message) {
+      resultsBox.replaceChildren();
+      const text = document.createElement('p'); text.className = 'search-info'; text.textContent = message;
+      resultsBox.append(text); resultsBox.classList.add('open');
+    }
+    function parseTourismSearch(query) {
+      const prefixes = [
+        /^(?:tìm\s+)?(?:các\s+)?(?:địa\s+điểm|điểm)\s+(?:du\s+lịch|tham\s+quan)\s*(?:ở|tại|quanh)?\s*/i,
+        /^(?:tìm\s+)?(?:các\s+)?địa\s+điểm\s+du\s+lịch\s*(?:ở|tại|quanh)?\s*/i,
+        /^(?:tìm\s+)?du\s+lịch\s*(?:ở|tại|quanh)?\s*/i,
+        /^(?:tourist\s+attractions?|tourism)\s*(?:in|near)?\s*/i
+      ];
+      for (const prefix of prefixes) {
+        if (prefix.test(query)) {
+          return { location: query.replace(prefix, '').trim(), category: 'du lịch' };
+        }
+      }
+      const suffix = /\s+(?:địa\s+điểm\s+)?du\s+lịch$/i;
+      if (suffix.test(query)) {
+        return { location: query.replace(suffix, '').trim(), category: 'du lịch' };
+      }
+      return null;
+    }
+    function parseWgs84Coordinates(query) {
+      const match = query.match(
+        /^\s*\(?\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*[,;\s]\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*\)?\s*$/
+      );
+      if (!match) return null;
+
+      const latitude = Number(match[1]);
+      const longitude = Number(match[2]);
+      if (
+        latitude < -90 || latitude > 90 ||
+        longitude < -180 || longitude > 180
+      ) {
+        throw new Error('Tọa độ WGS84 không hợp lệ. Vĩ độ phải từ -90 đến 90, kinh độ từ -180 đến 180.');
+      }
+      return { latitude, longitude };
+    }
+    function makeTourismOverpassQuery(location) {
+      if (!location) {
+        if (map.getZoom() < 10) {
+          throw new Error('Hãy phóng to khu vực muốn tìm hoặc nhập ví dụ “du lịch Đà Nẵng”.');
+        }
+        const bounds = map.getBounds();
+        return `[out:json][timeout:25];(nwr["tourism"](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}););out tags center ${maxTourismResults + 1};`;
+      }
+      const geocodeUrl = new URL('https://nominatim.openstreetmap.org/search');
+      geocodeUrl.search = new URLSearchParams({
+        q: location,
+        format: 'jsonv2',
+        limit: '1',
+        countrycodes: 'vn',
+        'accept-language': 'vi'
+      }).toString();
+      return fetch(geocodeUrl, { signal: searchController.signal })
+        .then(response => {
+          if (!response.ok) throw new Error('Không thể xác định khu vực tìm điểm du lịch.');
+          return response.json();
+        })
+        .then(places => {
+          if (!Array.isArray(places) || places.length === 0) {
+            throw new Error(`Không tìm thấy khu vực “${location}” ở Việt Nam.`);
+          }
+          const place = places[0];
+          const osmId = Number(place.osm_id);
+          if (!Number.isSafeInteger(osmId) || osmId <= 0) {
+            throw new Error('Khu vực này chưa có mã bản đồ để tìm địa điểm du lịch.');
+          }
+          if (place.osm_type === 'relation') {
+            return {
+              areaName: place.name || location,
+              query: `[out:json][timeout:25];area(${3600000000 + osmId})->.searchArea;(nwr["tourism"](area.searchArea););out tags center ${maxTourismResults + 1};`
+            };
+          }
+          if (place.osm_type === 'way') {
+            return {
+              areaName: place.name || location,
+              query: `[out:json][timeout:25];area(${2400000000 + osmId})->.searchArea;(nwr["tourism"](area.searchArea););out tags center ${maxTourismResults + 1};`
+            };
+          }
+          const latitude = Number(place.lat);
+          const longitude = Number(place.lon);
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            throw new Error('Không xác định được tọa độ khu vực tìm kiếm.');
+          }
+          return {
+            areaName: place.name || location,
+            query: `[out:json][timeout:25];(nwr["tourism"](around:10000,${latitude},${longitude}););out tags center ${maxTourismResults + 1};`
+          };
+        });
+    }
+    async function searchTourism(location) {
+      const areaSearch = makeTourismOverpassQuery(location);
+      const area = typeof areaSearch === 'string'
+        ? { areaName: 'khu vực bản đồ hiện tại', query: areaSearch }
+        : await areaSearch;
+      const overpassUrl = new URL('https://overpass-api.de/api/interpreter');
+      overpassUrl.searchParams.set('data', area.query);
+      const response = await fetch(overpassUrl, { signal: searchController.signal });
+      if (!response.ok) {
+        throw new Error(`Dịch vụ dữ liệu du lịch trả về HTTP ${response.status}.`);
+      }
+      const data = await response.json();
+      if (!Array.isArray(data.elements)) {
+        throw new Error('Dữ liệu địa điểm du lịch không hợp lệ.');
+      }
+      const landMask = await getVietnamLandMask();
+      const landFeature = turf.feature(landMask);
+      const places = data.elements
+        .map(element => {
+          const latitude = Number(element.lat ?? element.center?.lat);
+          const longitude = Number(element.lon ?? element.center?.lon);
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+          if (!turf.booleanPointInPolygon(turf.point([longitude, latitude]), landFeature)) return null;
+          return { element, latitude, longitude, tags: element.tags || {} };
+        })
+        .filter(Boolean)
+        .sort((first, second) =>
+          (first.tags.name || first.tags['name:vi'] || '').localeCompare(
+            second.tags.name || second.tags['name:vi'] || '',
+            'vi'
+          )
+        );
+      tourismLayer.clearLayers();
+      if (map.hasLayer(tourismLayer)) map.removeLayer(tourismLayer);
+      if (searchMarker) map.removeLayer(searchMarker);
+      if (searchBoundary) map.removeLayer(searchBoundary);
+      searchMarker = null;
+      searchBoundary = null;
+      searchBoundaryGeometry = null;
+      resultsBox.replaceChildren();
+      if (places.length === 0) {
+        resultMessage(`Không tìm thấy điểm du lịch trên đất liền ở ${area.areaName}.`);
+        return;
+      }
+      const header = document.createElement('p');
+      header.className = 'search-info';
+      const hasMore = data.elements.length > maxTourismResults;
+      header.textContent = `Tìm thấy ${places.length}${hasMore ? ` (hiển thị tối đa ${maxTourismResults})` : ''} điểm du lịch ở ${area.areaName}.`;
+      resultsBox.append(header);
+      places.slice(0, maxTourismResults).forEach(({ element, latitude, longitude, tags }, index) => {
+        const name = tags.name || tags['name:vi'] || tags.brand || `Điểm du lịch ${index + 1}`;
+        const kind = tags.tourism
+          ? tags.tourism.replace(/_/g, ' ')
+          : 'địa điểm du lịch';
+        const result = {
+          name,
+          display_name: `${name}, ${area.areaName}, Việt Nam`,
+          class: 'tourism',
+          type: tags.tourism || 'tourism',
+          addresstype: kind,
+          osm_type: element.type,
+          osm_id: element.id,
+          address: { city: area.areaName, country: 'Việt Nam' }
+        };
+        const marker = L.marker([latitude, longitude], { icon: pinIcon('selected') })
+          .bindPopup(searchPopupContent(result, latitude, longitude));
+        tourismLayer.addLayer(marker);
+        const button = document.createElement('button');
+        const nameElement = document.createElement('strong');
+        const kindElement = document.createElement('small');
+        button.className = 'search-result';
+        button.type = 'button';
+        nameElement.textContent = name;
+        kindElement.textContent = kind;
+        button.append(nameElement, document.createElement('br'), kindElement);
+        button.addEventListener('click', () => {
+          map.flyTo([latitude, longitude], 16, { duration: 1.2 });
+          marker.openPopup();
+        });
+        resultsBox.append(button);
+      });
+      const credit = document.createElement('div');
+      credit.className = 'search-credit';
+      credit.innerHTML = 'Dữ liệu địa điểm từ <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> / Overpass API';
+      resultsBox.append(credit);
+      tourismLayer.addTo(map);
+      const bounds = tourismLayer.getBounds();
+      if (bounds.isValid()) map.flyToBounds(bounds, { padding: [55, 55], maxZoom: 15, duration: 1.2 });
+      resultsBox.classList.add('open');
+    }
+    searchForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      const query = searchInput.value.trim();
+      if (!query) { searchInput.focus(); return; }
+      searchSelectionId++;
+      try {
+        const coordinates = parseWgs84Coordinates(query);
+        if (coordinates) {
+          tourismLayer.clearLayers();
+          if (map.hasLayer(tourismLayer)) map.removeLayer(tourismLayer);
+          if (searchMarker) map.removeLayer(searchMarker);
+          if (searchBoundary) map.removeLayer(searchBoundary);
+          searchBoundary = null;
+          searchBoundaryGeometry = null;
+          const { latitude, longitude } = coordinates;
+          const location = L.latLng(latitude, longitude);
+          const coordinateMarker = L.marker(location, { icon: pinIcon('selected') })
+            .addTo(map)
+            .bindPopup(popupContent(
+              'Vị trí theo tọa độ WGS84',
+              `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+            ));
+          searchMarker = coordinateMarker;
+          const zoom = Math.max(map.getZoom(), 15);
+          if (map.getCenter().equals(location) && map.getZoom() === zoom) {
+            coordinateMarker.openPopup();
+          } else {
+            map.once('moveend', () => coordinateMarker.openPopup());
+            map.flyTo(location, zoom, { duration: 1.2 });
+          }
+          searchInput.value = `${latitude}, ${longitude}`;
+          resultsBox.classList.remove('open');
+          showToast('Đã ghim vị trí theo tọa độ WGS84.');
+          return;
+        }
+      } catch (error) {
+        showToast(error.message);
+        return;
+      }
+      // Nominatim chỉ được gọi khi người dùng gửi tìm kiếm, không tự động gợi ý.
+      if (Date.now() - lastSearchAt < 1100) { showToast('Vui lòng đợi một giây trước khi tìm tiếp.'); return; }
+      lastSearchAt = Date.now();
+      tourismLayer.clearLayers();
+      if (map.hasLayer(tourismLayer)) map.removeLayer(tourismLayer);
+      if (searchController) searchController.abort();
+      searchController = new AbortController();
+      resultMessage('Đang tìm địa điểm...');
+      try {
+        const tourismSearch = parseTourismSearch(query);
+        if (tourismSearch) {
+          await searchTourism(tourismSearch.location);
+          return;
+        }
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.search = new URLSearchParams({ q: query, format: 'jsonv2', limit: '10', polygon_geojson: '1', countrycodes: 'vn', 'accept-language': 'vi' }).toString();
+        const response = await fetch(url, { signal: searchController.signal });
+        if (!response.ok) throw new Error('Search unavailable');
+        const results = await response.json();
+        resultsBox.replaceChildren();
+        if (!results.length) { resultMessage('Không tìm thấy địa điểm. Hãy thử một từ khóa khác.'); return; }
+        results.forEach(result => {
+          const button = document.createElement('button');
+          button.className = 'search-result'; button.type = 'button';
+          button.textContent = result.display_name;
+          button.addEventListener('click', async () => {
+            const lat = Number(result.lat), lng = Number(result.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            const selectionId = ++searchSelectionId;
+            tourismLayer.clearLayers();
+            if (map.hasLayer(tourismLayer)) map.removeLayer(tourismLayer);
+            if (searchMarker) map.removeLayer(searchMarker);
+            if (searchBoundary) map.removeLayer(searchBoundary);
+            searchBoundary = null;
+            searchBoundaryGeometry = null;
+            searchMarker = L.marker([lat, lng], { icon: pinIcon('selected') })
+              .addTo(map)
+              .bindPopup(searchPopupContent(result, lat, lng));
+            if (isAreaGeometry(result.geojson)) {
+              try {
+                const landMask = await getVietnamLandMask();
+                if (selectionId !== searchSelectionId) return;
+                const landArea = turf.intersect(turf.featureCollection([
+                  turf.feature(result.geojson),
+                  turf.feature(landMask)
+                ]));
+                if (landArea) {
+                  searchBoundaryGeometry = landArea.geometry;
+                  searchBoundary = L.geoJSON(landArea, {
+                    style: {
+                      color: '#1677ff',
+                      weight: 3,
+                      opacity: 0.95,
+                      fill: false
+                    }
+                  }).addTo(map);
+                  const bounds = searchBoundary.getBounds();
+                  if (bounds.isValid()) {
+                    map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 15, duration: 1.2 });
+                  } else {
+                    map.flyTo([lat, lng], 14, { duration: 1.2 });
+                    showToast('Không thể hiển thị ranh giới địa điểm này.');
+                  }
+                } else {
+                  map.flyTo([lat, lng], 14, { duration: 1.2 });
+                  showToast('Không tìm thấy phần ranh giới trên đất liền Việt Nam.');
+                }
+              } catch (error) {
+                vietnamLandMaskPromise = null;
+                console.error('Không thể cắt ranh giới theo phần đất liền Việt Nam:', error);
+                map.flyTo([lat, lng], 14, { duration: 1.2 });
+                showToast('Không thể tải hoặc xử lý dữ liệu đất liền. Vui lòng thử lại.');
+              }
+            } else {
+              map.flyTo([lat, lng], 14, { duration: 1.2 });
+              showToast('Địa điểm này chưa có dữ liệu ranh giới; đã đánh dấu vị trí.');
+            }
+            if (selectionId !== searchSelectionId) return;
+            setTimeout(() => {
+              if (selectionId === searchSelectionId) searchMarker.openPopup();
+            }, 1100);
+            searchInput.value = result.display_name.split(',')[0];
+            resultsBox.classList.remove('open');
+          });
+          resultsBox.append(button);
+        });
+        const credit = document.createElement('div');
+        credit.className = 'search-credit';
+        credit.innerHTML = 'Kết quả từ <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> / Nominatim';
+        resultsBox.append(credit); resultsBox.classList.add('open');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Không thể tìm kiếm địa điểm:', error);
+          resultMessage(error.message || 'Không thể tìm kiếm lúc này. Vui lòng thử lại sau.');
+        }
+      }
+    });
+    searchInput.addEventListener('input', () => resultsBox.classList.remove('open'));
+    document.addEventListener('click', event => { if (!event.target.closest('.search-area')) resultsBox.classList.remove('open'); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') resultsBox.classList.remove('open'); });
+
+    async function hienThiHoKhoan() {
+      const response = await fetch('/ho-khoan/api');
+      if (!response.ok) {
+        throw new Error(`API hố khoan trả về HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new Error('Dữ liệu hố khoan không hợp lệ.');
+      }
+
+      const markers = [];
+      data.forEach(hole => {
+        if (
+          !hole || hole.latitude == null || hole.longitude == null ||
+          hole.latitude === '' || hole.longitude === ''
+        ) {
+          return;
+        }
+
+        const latitude = Number(hole.latitude);
+        const longitude = Number(hole.longitude);
+        if (
+          !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+          latitude < -90 || latitude > 90 ||
+          longitude < -180 || longitude > 180
+        ) {
+          return;
+        }
+
+        const marker = L.marker([latitude, longitude], {
+          icon: window.createBoreholeIcon()
+        });
+        const popup = document.createElement('div');
+        const title = document.createElement('strong');
+        const project = document.createElement('div');
+        title.textContent = hole.ma_ho_khoan || `Hố khoan ${hole.id}`;
+        project.textContent = `Mã công trình: ${hole.cong_trinh_id}`;
+        popup.append(title, document.createElement('br'), project);
+        marker.bindPopup(popup);
+        markers.push(marker);
+      });
+
+      hoKhoanMarkers.forEach(marker => map.removeLayer(marker));
+      hoKhoanMarkers = markers;
+      hoKhoanMarkers.forEach(marker => marker.addTo(map));
+
+      if (hoKhoanMarkers.length > 0) {
+        map.fitBounds(L.featureGroup(hoKhoanMarkers).getBounds(), {
+          padding: [50, 50]
+        });
+      }
+    }
+  </script>
+
+
+  <script>
+
+document.querySelectorAll('.menu-btn').forEach(btn=>{
+
+    btn.addEventListener('click',function(e){
+
+        e.stopPropagation();
+
+        document.querySelectorAll('.submenu').forEach(menu=>{
+
+            if(menu!==this.nextElementSibling){
+                menu.classList.remove('show');
+            }
+
+        });
+
+        this.nextElementSibling.classList.toggle('show');
+    });
+
+});
+
+document.addEventListener('click',()=>{
+
+    document.querySelectorAll('.submenu').forEach(menu=>{
+        menu.classList.remove('show');
+    });
+
+});
+
+</script>
+
+<script>
+
+document
+.getElementById('btnCongTrinh')
+.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+        const visible = await window.toggleMatBang();
+        button.setAttribute('aria-pressed', String(visible));
+    } catch (error) {
+        console.error('Không thể bật/tắt lớp mặt bằng:', error);
+        showToast(error.message || 'Không thể tải lớp mặt bằng. Vui lòng thử lại.');
+    } finally {
+        button.disabled = false;
+    }
+});
+
+let hoKhoanVisible = false;
+
+const btnHoKhoan = document.getElementById('btnHoKhoan');
+window.hideAllHoKhoan = () => {
+    window.hideHoleScan();
+    hoKhoanMarkers.forEach(marker => map.removeLayer(marker));
+    hoKhoanMarkers = [];
+    hoKhoanVisible = false;
+    btnHoKhoan.setAttribute('aria-pressed', 'false');
+};
+
+btnHoKhoan.addEventListener('click', async () => {
+    btnHoKhoan.disabled = true;
+    try {
+        if (!hoKhoanVisible) {
+            await hienThiHoKhoan();
+            hoKhoanVisible = true;
+        } else {
+            hoKhoanMarkers.forEach(marker => map.removeLayer(marker));
+            hoKhoanMarkers = [];
+            hoKhoanVisible = false;
+        }
+        btnHoKhoan.setAttribute('aria-pressed', String(hoKhoanVisible));
+    } catch (error) {
+        console.error('Không tải được dữ liệu hố khoan:', error);
+        alert('Không tải được dữ liệu hố khoan. Vui lòng thử lại.');
+    } finally {
+        btnHoKhoan.disabled = false;
+    }
+});
+
+document
+.getElementById('btnLopDat')
+.addEventListener('click', () => {
+
+    window.location.href =
+    '/lop-dat';
+
+});
+
+document
+.getElementById('btnMauTN')
+.addEventListener('click', () => {
+
+    window.location.href =
+    '/mau-thi-nghiem';
+
+});
+
+document.getElementById('btnXuatTongHop').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+
+    try {
+        const response = await fetch('/xuat-file/tong-hop');
+        if (!response.ok) {
+            throw new Error(`Xuất file thất bại: HTTP ${response.status}`);
+        }
+
+        const fileUrl = URL.createObjectURL(await response.blob());
+        const downloadLink = document.createElement('a');
+        downloadLink.href = fileUrl;
+        downloadLink.download = 'tong-hop-du-lieu.xlsx';
+        downloadLink.click();
+        setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+        showToast('Đã xuất file tổng hợp dữ liệu.');
+    } catch (error) {
+        console.error('Không thể xuất file tổng hợp:', error);
+        showToast('Không thể xuất file tổng hợp. Vui lòng thử lại.');
+    } finally {
+        button.disabled = false;
+    }
+});
+
+</script>
+<script src="/js/mat-bang.js?v=assigned-area-layer"></script>
+<script>
+  void focusAssignedArea();
+
+  (() => {
+    const currentRole = document.body.dataset.userRole;
+    const enabledPermissions = new Set(
+      JSON.parse(document.body.dataset.enabledPermissions || '[]')
+    );
+    const roleLabels = {
+      'ky-su': 'Kỹ sư',
+      'quan-tri-vien': 'Quản trị viên',
+      'nguoi-xem-ban-do': 'Người xem bản đồ'
+    };
+
+    function guardAction(event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const action = target.closest('[data-required-roles]');
+      if (!action) return;
+
+      const requiredRoles = action.dataset.requiredRoles.split(',');
+      if (currentRole && requiredRoles.includes(currentRole)) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const role = requiredRoles[0];
+      const roleName = roleLabels[role] || 'đúng chức vụ';
+      const actionName =
+        action.getAttribute('aria-label') ||
+        action.getAttribute('title') ||
+        action.textContent.trim() ||
+        'chức năng này';
+
+      if (window.confirm(
+        `Muốn dùng "${actionName}", bạn cần đăng nhập với vai trò ${roleName}. Đăng nhập ngay?`
+      )) {
+        window.location.href = `/dang-nhap/${role}`;
+      }
+    }
+
+    document.querySelectorAll('[data-system-permission]').forEach((action) => {
+      if (!enabledPermissions.has(action.dataset.systemPermission)) {
+        action.hidden = true;
+      }
+    });
+
+    document.addEventListener('click', guardAction, true);
+    document.addEventListener('submit', guardAction, true);
+  })();
+</script>
+</body>
+</html>

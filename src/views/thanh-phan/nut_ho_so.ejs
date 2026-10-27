@@ -1,0 +1,67 @@
+<style>
+  .profile-button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 9px;
+    color: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .profile-button:hover { color: inherit; text-decoration: none; }
+  a.profile-button:hover .profile-button-name { text-decoration: underline; }
+  .profile-button-avatar {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    border: 2px solid #d9eee7;
+    border-radius: 50%;
+    background: #e8f5ef;
+    color: #08745e;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .profile-button-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-button-identity { display: grid; gap: 3px; }
+  .profile-button-name { max-width: 150px; overflow: hidden; font-weight: 700; text-overflow: ellipsis; }
+  .profile-button-role { opacity: .82; font-size: 11px; }
+  @media (max-width: 480px) {
+    .profile-button { gap: 6px; }
+    .profile-button-avatar { width: 34px; height: 34px; }
+    .profile-button-name { max-width: 105px; }
+  }
+</style>
+<% if (typeof currentUser !== 'undefined' && currentUser) { %>
+  <%
+    const profileName = currentUser.fullName || currentUser.username || 'Tài khoản';
+    const profileRoleLabel = {
+      'ky-su': 'Kỹ sư',
+      'quan-tri-vien': 'Quản trị viên',
+      'nguoi-xem-ban-do': 'Người xem bản đồ',
+    }[currentUser.role] || 'Tài khoản';
+    const profileInitial = profileName.slice(0, 1).toUpperCase();
+  %>
+    <a class="profile-button" href="/nguoi-dung/ho-so" title="Mở hồ sơ cá nhân">
+      <span class="profile-button-avatar">
+        <% if (currentUser.hasAvatar) { %>
+          <img
+            src="<%= currentUser.avatarUrl || '/nguoi-dung/ho-so/anh' %>"
+            alt=""
+            onerror="this.hidden = true; this.nextElementSibling.hidden = false"
+          />
+          <span hidden><%= profileInitial %></span>
+        <% } else { %>
+          <%= profileInitial %>
+        <% } %>
+      </span>
+      <span class="profile-button-identity">
+        <span class="profile-button-name"><%= profileName %></span>
+        <span class="profile-button-role"><%= profileRoleLabel %></span>
+      </span>
+    </a>
+<% } %>

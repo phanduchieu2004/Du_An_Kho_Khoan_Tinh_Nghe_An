@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f2f7f4" />
+  <title>Chọn cổng đăng nhập | Hồ Khoan</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #19332e; background: #f2f7f4; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 32px 18px; }
+    a { color: inherit; }
+    .shell { width: min(100%, 960px); }
+    .back { display: inline-block; margin-bottom: 28px; color: #52716a; font-size: 14px; text-decoration: none; }
+    .back:hover { color: #08745e; }
+    .heading { margin-bottom: 28px; }
+    .eyebrow { margin: 0 0 10px; color: #08745e; font-size: 12px; font-weight: 800; letter-spacing: 1.7px; text-transform: uppercase; }
+    h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 42px); letter-spacing: -1.5px; }
+    .intro { max-width: 600px; margin: 0; color: #647873; line-height: 1.7; }
+    .portals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .portal { min-height: 220px; padding: 24px; display: flex; flex-direction: column; border: 1px solid #e0ebe5; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px #19332e0a; text-decoration: none; transition: transform .18s, box-shadow .18s, border-color .18s; }
+    .portal:hover { transform: translateY(-3px); border-color: #9bcdbd; box-shadow: 0 18px 38px #19332e14; }
+    .icon { width: 46px; height: 46px; margin-bottom: 23px; display: grid; place-items: center; border-radius: 14px; background: #e8f5ef; color: #08745e; font-size: 20px; font-weight: 800; }
+    .portal:nth-child(2) .icon { background: #edf1fc; color: #5266a5; }
+    .portal:nth-child(3) .icon { background: #fff2e8; color: #b56c3f; }
+    .portal:nth-child(4) .icon { background: #e8f3fb; color: #397194; }
+    h2 { margin: 0 0 8px; font-size: 18px; }
+    .description { margin: 0; color: #6e817b; font-size: 13px; line-height: 1.6; }
+    .continue { margin-top: auto; padding-top: 18px; color: #08745e; font-size: 13px; font-weight: 750; }
+    .notice { margin-top: 22px; padding: 13px 16px; border: 1px solid #f0dfb5; border-radius: 12px; background: #fff9e9; color: #755c21; font-size: 13px; line-height: 1.5; }
+    @media (max-width: 720px) { .portals { grid-template-columns: 1fr; } .portal { min-height: 0; } .icon { margin-bottom: 16px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <a class="back" href="/">← Trở về bản đồ</a>
+    <header class="heading">
+      <p class="eyebrow">Hồ Khoan</p>
+      <h1>Chọn cổng truy cập</h1>
+      <p class="intro">Chọn đúng khu vực theo chức năng của bạn để tiếp tục.</p>
+    </header>
+    <section class="portals" aria-label="Các cổng đăng nhập">
+      <% roles.forEach((role, index) => { %>
+        <a class="portal" href="/dang-nhap/<%= role.slug %>">
+          <span class="icon" aria-hidden="true"><%= ['K', 'Q', 'QL', 'B'][index] %></span>
+          <h2><%= role.title %></h2>
+          <p class="description"><%= role.description %></p>
+          <span class="continue">Mở cổng đăng nhập →</span>
+        </a>
+      <% }); %>
+    </section>
+    <p class="notice">Đăng nhập bằng tài khoản đã được cấp cho từng cổng.</p>
+  </main>
+</body>
+</html>

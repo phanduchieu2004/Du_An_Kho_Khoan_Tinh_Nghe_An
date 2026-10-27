@@ -1,0 +1,94 @@
+<%
+const formatDate = (value) => value
+  ? new Intl.DateTimeFormat('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(value)
+  : '—';
+const statusLabel = {
+  CHO_DUYET: 'Chờ duyệt',
+  DA_DUYET: 'Đã duyệt',
+  TU_CHOI: 'Từ chối',
+};
+%>
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hồ sơ cá nhân - Hồ sơ khoan địa chất</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    :root { color-scheme: light; font-family: "Segoe UI", sans-serif; color: #1f302d; background: #f3f6f4; }
+    body { min-height: 100vh; margin: 0; background: #f3f6f4; }
+    .topbar { min-height: 64px; display: flex; align-items: center; gap: 18px; padding: 10px max(20px, calc((100% - 1120px) / 2)); background: #057362; color: #fff; }
+    .topbar a { color: #fff; text-decoration: none; }
+    .brand { margin-right: auto; font-weight: 700; }
+    main { width: min(1000px, calc(100% - 32px)); margin: 32px auto; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #53736a; text-decoration: none; }
+    .profile-card { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; padding: 28px; border: 1px solid #dce5e1; border-radius: 16px; background: #fff; box-shadow: 0 8px 26px #19332e0a; }
+    .avatar-panel { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .avatar-frame { width: 176px; height: 176px; display: grid; place-items: center; overflow: hidden; border: 5px solid #e7f2ed; border-radius: 50%; background: #edf5f1; color: #08745e; }
+    .avatar-frame img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-placeholder { width: 82px; height: 82px; }
+    .avatar-panel h1 { margin: 16px 0 3px; color: #203b34; font-size: 22px; font-weight: 750; }
+    .username { color: #788982; font-size: 13px; }
+    .upload-form { width: 100%; margin-top: 19px; }
+    .upload-help { margin: 8px 0 0; color: #7a8983; font-size: 12px; line-height: 1.5; }
+    .details-title { margin: 0 0 15px; color: #25443b; font-size: 18px; font-weight: 700; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+    .detail-item { min-width: 0; padding: 12px 0; border-bottom: 1px solid #edf1ef; }
+    .detail-item.wide { grid-column: 1 / -1; }
+    .detail-label { display: block; margin-bottom: 4px; color: #7a8983; font-size: 12px; }
+    .detail-value { color: #2e4039; font-size: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .status { display: inline-block; padding: 4px 9px; border-radius: 999px; background: #fff4d5; color: #835e00; font-size: 12px; font-weight: 700; }
+    @media (max-width: 700px) { .profile-card { grid-template-columns: 1fr; padding: 20px; } }
+    @media (max-width: 460px) { .detail-grid { grid-template-columns: 1fr; } .detail-item.wide { grid-column: auto; } .topbar { flex-wrap: wrap; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_cong') %>
+  <main>
+    <a class="back-link" href="/">← Quay lại bản đồ</a>
+    <section class="profile-card">
+      <aside class="avatar-panel">
+        <div class="avatar-frame">
+          <% if (avatarUrl) { %>
+            <img src="<%= avatarUrl %>" alt="Ảnh đại diện của <%= account.ho_ten || account.ten_dang_nhap %>" />
+          <% } else { %>
+            <svg class="avatar-placeholder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 21a8 8 0 0 1 16 0"></path>
+            </svg>
+          <% } %>
+        </div>
+        <h1><%= account.ho_ten || account.ten_dang_nhap %></h1>
+        <div class="username">@<%= account.ten_dang_nhap %> · <%= roleTitle %></div>
+        <form class="upload-form" action="/nguoi-dung/ho-so/anh" method="post" enctype="multipart/form-data">
+          <label class="form-label fw-semibold" for="avatar">Ảnh đại diện</label>
+          <input class="form-control form-control-sm" id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" required />
+          <button class="btn btn-success w-100 mt-2" type="submit"><%= avatarUrl ? 'Cập nhật ảnh' : 'Tải ảnh lên' %></button>
+          <p class="upload-help">JPG, PNG hoặc WebP · tối đa 5 MB. Ảnh được lưu trên máy chủ theo tài khoản, không lưu vào cơ sở dữ liệu.</p>
+        </form>
+      </aside>
+      <div>
+        <h2 class="details-title">Thông tin cá nhân</h2>
+        <div class="detail-grid">
+          <% if (account.ma_ky_su) { %><div class="detail-item"><span class="detail-label">Mã kỹ sư</span><div class="detail-value"><%= account.ma_ky_su %></div></div><% } %>
+          <div class="detail-item"><span class="detail-label">Trạng thái hồ sơ</span><div class="detail-value"><span class="status"><%= statusLabel[account.trang_thai] || account.trang_thai || 'Chưa cập nhật' %></span></div></div>
+          <div class="detail-item"><span class="detail-label">Email</span><div class="detail-value"><%= account.email || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item"><span class="detail-label">Số điện thoại</span><div class="detail-value"><%= account.so_dien_thoai || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item wide"><span class="detail-label">Địa chỉ</span><div class="detail-value"><%= account.dia_chi || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item"><span class="detail-label">Chuyên ngành</span><div class="detail-value"><%= account.chuyen_nganh || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item"><span class="detail-label">Đơn vị công tác</span><div class="detail-value"><%= account.don_vi_cong_tac || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item wide"><span class="detail-label">Số chứng chỉ hành nghề</span><div class="detail-value"><%= account.so_chung_chi_hanh_nghe || 'Chưa cập nhật' %></div></div>
+          <div class="detail-item wide"><span class="detail-label">Khu vực được xem</span><div class="detail-value"><%= account.khu_vuc_duoc_xem || 'Chưa giới hạn khu vực' %></div></div>
+          <div class="detail-item"><span class="detail-label">Ngày tạo tài khoản</span><div class="detail-value"><%= formatDate(account.ngay_tao) %></div></div>
+          <div class="detail-item"><span class="detail-label">Lần đăng nhập cuối</span><div class="detail-value"><%= formatDate(account.lan_dang_nhap_cuoi) %></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

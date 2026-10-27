@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+    .table-frame { overflow: auto; border: 1px solid #dce5e1; background: #fff; }
+    table { margin: 0 !important; }
+    thead th { background: #e9f0ed !important; color: #344b44; white-space: nowrap; }
+    td { vertical-align: middle; }
+    @media (max-width: 700px) { main { padding: 22px 12px 36px; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <main>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+      <h1 class="h3 mb-0"><%= title %></h1>
+      <a class="btn btn-outline-secondary" href="/cong-trinh/danh-sach">Quản lý công trình</a>
+    </div>
+    <% if (cancellationApproved) { %>
+      <div class="alert alert-success" role="status">
+        Đã duyệt hủy. Phân công của kỹ sư đã được gỡ và trạng thái chuyển thành “Chưa phân bổ”.
+      </div>
+    <% } %>
+    <div class="table-frame">
+      <table class="table table-hover table-striped table-bordered align-middle">
+        <thead><tr><th>Kỹ sư</th><th>Công trình</th><th>Khu vực</th><th>Lý do hủy</th><th>Ngày gửi</th><th>Thao tác</th></tr></thead>
+        <tbody>
+          <% if (requests.length === 0) { %>
+            <tr><td colspan="6" class="text-center p-4 text-secondary">Không có đơn hủy nào đang chờ duyệt.</td></tr>
+          <% } else { %>
+            <% requests.forEach((request) => { %>
+              <tr>
+                <td><%= request.ho_ten || request.ten_dang_nhap %></td>
+                <td><%= request.ten_cong_trinh || `Công trình ${request.cong_trinh_id}` %></td>
+                <td><%= request.khu_vuc || '—' %></td>
+                <td style="white-space: pre-wrap; min-width: 280px;"><%= request.ly_do %></td>
+                <td><%= request.ngay_tao ? new Date(request.ngay_tao).toLocaleString('vi-VN') : '—' %></td>
+                <td>
+                  <form method="post" action="/cong-trinh/yeu-cau-huy/<%= request.id %>/duyet" onsubmit="return confirm('Duyệt hủy và gỡ phân công công trình này khỏi kỹ sư?');">
+                    <button class="btn btn-sm btn-danger" type="submit">Duyệt hủy</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

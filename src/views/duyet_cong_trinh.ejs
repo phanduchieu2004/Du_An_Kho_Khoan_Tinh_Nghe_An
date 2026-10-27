@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: #f3f6f4; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .approval-tabs { display: flex; align-items: center; gap: 0; margin: 0 0 22px; padding: 0; overflow-x: auto; border-bottom: 1px solid #dce5e1; list-style: none; }
+    .approval-tabs a { display: flex; align-items: center; gap: 8px; margin-bottom: -1px; padding: 12px 20px; border: 1px solid transparent; border-radius: 7px 7px 0 0; color: #08745e; text-decoration: none; white-space: nowrap; }
+    .approval-tabs a:hover { background: #eef5f2; }
+    .approval-tabs a.active { border-color: #dce5e1 #dce5e1 #f3f6f4; background: #fff; color: #1f302d; }
+    .approval-tabs .badge { background: #f3f5f6; color: #1f302d; }
+    .table-frame { overflow: auto; border: 1px solid #dce5e1; background: white; }
+    table { margin: 0 !important; white-space: nowrap; }
+    thead th { background: #e9f0ed !important; color: #344b44; }
+    td { vertical-align: middle; }
+    .request-boundary { max-width: 520px; max-height: 140px; overflow: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .empty { padding: 32px !important; text-align: center; color: #667772; }
+    @media (max-width: 700px) { main { padding: 22px 12px 36px; } .page-heading { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <main>
+    <div class="page-heading">
+      <h1 class="h3 mb-0"><%= title %></h1>
+      <a class="btn btn-outline-secondary" href="/cong-trinh/danh-sach">Quay lại danh sách</a>
+    </div>
+    <nav aria-label="Các danh sách chờ duyệt">
+      <ul class="approval-tabs">
+        <li><a class="<%= activeTab === 'cong-trinh' ? 'active' : '' %>" href="/cong-trinh/cho-duyet"><span>Duyệt công trình</span><span class="badge"><%= tabCounts.projects %></span></a></li>
+        <li><a class="<%= activeTab === 'cap-2' ? 'active' : '' %>" href="/cong-trinh/cho-duyet?tab=cap-2"><span>Mặt bằng cấp 2</span><span class="badge"><%= tabCounts.levelTwo %></span></a></li>
+        <li><a class="<%= activeTab === 'cap-3' ? 'active' : '' %>" href="/cong-trinh/cho-duyet?tab=cap-3"><span>Mặt bằng cấp 3</span><span class="badge"><%= tabCounts.levelThree %></span></a></li>
+        <li><a class="<%= activeTab === 'cap-4' ? 'active' : '' %>" href="/cong-trinh/cho-duyet?tab=cap-4"><span>Mặt bằng cấp 4</span><span class="badge"><%= tabCounts.levelFour %></span></a></li>
+      </ul>
+    </nav>
+    <% if (activeTab === 'cong-trinh') { %>
+      <p>Các công trình mới sẽ chỉ xuất hiện trong danh sách phân bổ sau khi được duyệt.</p>
+    <div class="table-frame">
+      <table class="table table-hover table-striped table-bordered align-middle">
+        <thead>
+          <tr><th>Mã</th><th>Tên công trình</th><th>Địa điểm</th><th>Hạng mục</th><th>Ngày tạo</th><th>Trạng thái</th><th>Thao tác</th></tr>
+        </thead>
+        <tbody>
+          <% if (projects.length === 0) { %>
+            <tr><td class="empty" colspan="7">Không có công trình nào đang chờ duyệt.</td></tr>
+          <% } else { %>
+            <% projects.forEach((project) => { %>
+              <tr>
+                <td><%= project.id %></td>
+                <td><%= project.ten_cong_trinh || `Công trình ${project.id}` %></td>
+                <td><%= project.dia_diem || '—' %></td>
+                <td><%= project.hang_muc || '—' %></td>
+                <td><%= project.ngay_tao ? new Date(project.ngay_tao).toLocaleString('vi-VN') : '—' %></td>
+                <td><span class="badge text-bg-warning">Chờ duyệt</span></td>
+                <td>
+                  <form method="post" action="/cong-trinh/<%= project.id %>/duyet" onsubmit="return confirm('Duyệt công trình này để đưa vào danh sách phân bổ?');">
+                    <button class="btn btn-sm btn-success" type="submit">Duyệt</button>
+                  </form>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <% } else { %>
+      <p>Mặt bằng chỉ được thêm chính thức sau khi được duyệt. Mỗi mặt bằng được liên kết với mã mặt bằng cấp cha.</p>
+      <div class="table-frame">
+        <table class="table table-hover table-striped table-bordered align-middle">
+          <thead>
+            <tr><th>Mã yêu cầu</th><th>Mã công trình</th><th>Tên công trình</th><th>Mặt bằng cấp <%= Number(activeTab.replace('cap-', '')) - 1 %> cha</th><th>Tên mặt bằng đề xuất</th><th>Loại</th><th>Người yêu cầu</th><th>Ngày gửi</th><th>Ranh giới</th><th>Thao tác</th></tr>
+          </thead>
+          <tbody>
+            <% if (surveyRequests.length === 0) { %>
+              <tr><td class="empty" colspan="10">Không có mặt bằng cấp <%= activeTab.replace('cap-', '') %> nào đang chờ duyệt.</td></tr>
+            <% } else { %>
+              <% surveyRequests.forEach((request) => { %>
+                <tr>
+                  <td><%= request.id %></td>
+                  <td><%= request.cong_trinh_id %></td>
+                  <td><%= request.ten_cong_trinh || `Công trình ${request.cong_trinh_id}` %></td>
+                  <td><%= request.mat_bang_cha_id %> · <%= request.ten_mat_bang_cha %></td>
+                  <td><%= request.ten_mat_bang %></td>
+                  <td><%= request.loai_mat_bang %></td>
+                  <td><%= request.nguoi_yeu_cau %></td>
+                  <td><%= new Date(request.ngay_tao).toLocaleString('vi-VN') %></td>
+                  <td><details><summary>Xem ranh giới</summary><pre class="request-boundary"><%= JSON.stringify(request.ranh_gioi, null, 2) %></pre></details></td>
+                  <td>
+                    <form method="post" action="/cong-trinh/mat-bang-cap-cho-duyet/<%= activeTab.replace('cap-', '') %>/<%= request.id %>/duyet" onsubmit="return confirm('Duyệt và thêm mặt bằng cấp <%= activeTab.replace('cap-', '') %> vào công trình?');">
+                      <button class="btn btn-sm btn-success" type="submit">Duyệt</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

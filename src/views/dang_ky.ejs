@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f2f7f4" />
+  <title>Đăng ký <%= role.title %> | Hồ Khoan</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #19332e; background: #f2f7f4; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px 16px; }
+    a { color: inherit; }
+    .card { width: min(100%, 620px); padding: 34px; border: 1px solid #e0ebe5; border-radius: 20px; background: #fff; box-shadow: 0 20px 55px #19332e12; }
+    .back { display: inline-block; margin-bottom: 28px; color: #52716a; font-size: 13px; text-decoration: none; }
+    .back:hover { color: #08745e; }
+    .eyebrow { margin: 0 0 9px; color: #08745e; font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+    h1 { margin: 0 0 8px; font-size: 29px; letter-spacing: -.8px; }
+    .intro { margin: 0 0 25px; color: #6e817b; font-size: 14px; line-height: 1.6; }
+    label { display: block; margin: 16px 0 7px; font-size: 13px; font-weight: 700; }
+    input, textarea { width: 100%; min-height: 46px; padding: 0 13px; border: 1px solid #dce7e1; border-radius: 10px; background: #fbfdfc; color: #19332e; font: inherit; }
+    textarea { min-height: 82px; padding: 12px 13px; resize: vertical; }
+    input:focus, textarea:focus { border-color: #54a98e; outline: 3px solid #d9f1e8; }
+    .form-section { margin-top: 25px; padding-top: 18px; border-top: 1px solid #e6eee9; }
+    .form-section h2 { margin: 0; color: #25443b; font-size: 17px; }
+    .form-section .section-help { margin: 5px 0 0; color: #6e817b; font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+    .wide { grid-column: 1 / -1; }
+    .submit { width: 100%; min-height: 46px; margin-top: 22px; border: 0; border-radius: 10px; background: #08745e; color: #fff; font: inherit; font-weight: 750; cursor: pointer; }
+    .submit:hover { background: #075f4d; }
+    .error { margin: 16px 0 0; color: #a33131; font-size: 13px; }
+    .footer { margin: 20px 0 0; text-align: center; color: #82918c; font-size: 12px; }
+    .footer a { color: #08745e; font-weight: 700; }
+    @media (max-width: 560px) { .card { padding: 26px 21px; } .form-grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <a class="back" href="/dang-nhap/<%= role.slug %>">← Quay lại đăng nhập</a>
+    <p class="eyebrow">Tạo tài khoản</p>
+    <h1><%= role.title %></h1>
+    <p class="intro">Nhập thông tin tài khoản và hồ sơ để sử dụng cổng <%= role.title %>.</p>
+    <form action="/dang-ky/<%= role.slug %>" method="post">
+      <section class="form-section">
+        <h2>Thông tin tài khoản</h2>
+        <div class="form-grid">
+          <div>
+            <label for="fullName">Họ và tên</label>
+            <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Nhập họ và tên" value="<%= fullName || '' %>" maxlength="255" required />
+          </div>
+          <div>
+            <label for="username">Tên đăng nhập</label>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="3-100 ký tự: chữ, số, ., _ hoặc -" value="<%= username || '' %>" minlength="3" maxlength="100" pattern="[\p{L}\p{N}._-]+" required />
+          </div>
+          <div>
+            <label for="password">Mật khẩu</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Ít nhất 8 ký tự" minlength="8" maxlength="255" required />
+          </div>
+          <div>
+            <label for="passwordConfirmation">Nhập lại mật khẩu</label>
+            <input id="passwordConfirmation" name="passwordConfirmation" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu" minlength="8" maxlength="255" required />
+          </div>
+        </div>
+      </section>
+      <section class="form-section">
+        <h2>Thông tin liên hệ</h2>
+        <div class="form-grid">
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" maxlength="255" placeholder="name@example.com" value="<%= profile?.email || '' %>" />
+          </div>
+          <div>
+            <label for="phone">Số điện thoại</label>
+            <input id="phone" name="so_dien_thoai" type="tel" autocomplete="tel" maxlength="20" placeholder="Nhập số điện thoại" value="<%= profile?.so_dien_thoai || '' %>" />
+          </div>
+          <div class="wide">
+            <label for="address">Địa chỉ</label>
+            <textarea id="address" name="dia_chi" autocomplete="street-address" placeholder="Địa chỉ liên hệ"><%= profile?.dia_chi || '' %></textarea>
+          </div>
+        </div>
+      </section>
+      <% if (role.slug === 'ky-su') { %>
+        <section class="form-section">
+          <h2>Thông tin chuyên môn kỹ sư</h2>
+          <p class="section-help">Các thông tin này giúp quản trị viên xác minh hồ sơ chuyên môn.</p>
+          <div class="form-grid">
+            <div>
+              <label for="engineerCode">Mã kỹ sư</label>
+              <input id="engineerCode" name="ma_ky_su" maxlength="50" value="<%= profile?.ma_ky_su || '' %>" />
+            </div>
+            <div>
+              <label for="specialty">Chuyên ngành</label>
+              <input id="specialty" name="chuyen_nganh" maxlength="100" placeholder="Ví dụ: Địa chất công trình" value="<%= profile?.chuyen_nganh || '' %>" />
+            </div>
+            <div>
+              <label for="organization">Đơn vị công tác</label>
+              <input id="organization" name="don_vi_cong_tac" maxlength="255" value="<%= profile?.don_vi_cong_tac || '' %>" />
+            </div>
+            <div>
+              <label for="certificate">Số chứng chỉ hành nghề</label>
+              <input id="certificate" name="so_chung_chi_hanh_nghe" maxlength="100" value="<%= profile?.so_chung_chi_hanh_nghe || '' %>" />
+            </div>
+          </div>
+        </section>
+      <% } %>
+      <button class="submit" type="submit">Tạo tài khoản</button>
+    </form>
+    <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+    <p class="footer">Đã có tài khoản? <a href="/dang-nhap/<%= role.slug %>">Đăng nhập</a></p>
+  </main>
+</body>
+</html>

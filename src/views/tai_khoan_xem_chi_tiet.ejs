@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    body { margin: 0; background: <%= embedded ? '#fff' : '#f3f6f4' %>; color: #1f302d; font-family: "Segoe UI", sans-serif; }
+    .account-detail-main { width: min(960px, calc(100% - 32px)); margin: <%= embedded ? '0 auto' : '36px auto' %>; padding: <%= embedded ? '20px' : '28px' %>; background: #fff; border: <%= embedded ? '0' : '1px solid #dce5e1' %>; border-radius: 12px; }
+    .detail-section { margin-top: 28px; }
+    .detail-section h2 { padding-bottom: 9px; border-bottom: 1px solid #e2eae6; color: #25443b; font-size: 18px; }
+    .detail-item { min-height: 74px; padding: 12px 14px; border: 1px solid #e2eae6; border-radius: 8px; background: #f9fbfa; }
+    .detail-label { display: block; margin-bottom: 5px; color: #667772; font-size: 12px; }
+    .detail-value { overflow-wrap: anywhere; font-weight: 600; white-space: pre-wrap; }
+    @media (max-width: 650px) { .account-detail-main { padding: 19px; margin: 18px auto; } }
+  </style>
+</head>
+<body>
+  <% if (!embedded) { %>
+    <%- include('thanh-phan/dau_trang_quan_tri') %>
+  <% } %>
+  <main class="account-detail-main">
+    <% if (!embedded) { %>
+      <a href="/nguoi-dung/quyen/<%= selectedRole || 'quan-tri-vien' %>" class="text-decoration-none">← Danh sách tài khoản</a>
+    <% } %>
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mt-3">
+      <div class="d-flex align-items-center gap-3">
+        <% if (avatarUrl) { %>
+          <img src="<%= avatarUrl %>" alt="Ảnh đại diện <%= account.ho_ten || account.ten_dang_nhap %>" width="76" height="76" class="rounded-circle object-fit-cover" />
+        <% } %>
+        <div>
+          <h1 class="h3 mb-1"><%= account.ho_ten || account.ten_dang_nhap %></h1>
+          <p class="text-secondary mb-0">Chi tiết đầy đủ thông tin tài khoản</p>
+        </div>
+      </div>
+      <% if (!embedded) { %>
+        <a class="btn btn-outline-primary" href="/nguoi-dung/<%= account.ma_nguoi_dung %>?role=<%= selectedRole || 'quan-tri-vien' %>">Sửa tài khoản</a>
+      <% } %>
+    </div>
+
+    <section class="detail-section">
+      <h2>Thông tin tài khoản</h2>
+      <div class="row g-3">
+        <div class="col-sm-6 col-md-4"><div class="detail-item"><span class="detail-label">Mã tài khoản</span><span class="detail-value"><%= account.ma_nguoi_dung %></span></div></div>
+        <div class="col-sm-6 col-md-4"><div class="detail-item"><span class="detail-label">Tên đăng nhập</span><span class="detail-value"><%= account.ten_dang_nhap || '—' %></span></div></div>
+        <div class="col-sm-6 col-md-4"><div class="detail-item"><span class="detail-label">Họ và tên</span><span class="detail-value"><%= account.ho_ten || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Email</span><span class="detail-value"><%= account.email || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Số điện thoại</span><span class="detail-value"><%= account.so_dien_thoai || '—' %></span></div></div>
+        <div class="col-12"><div class="detail-item"><span class="detail-label">Địa chỉ</span><span class="detail-value"><%= account.dia_chi || '—' %></span></div></div>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <h2>Thông tin chuyên môn</h2>
+      <div class="row g-3">
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Mã kỹ sư</span><span class="detail-value"><%= account.ma_ky_su || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Chuyên ngành</span><span class="detail-value"><%= account.chuyen_nganh || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Đơn vị công tác</span><span class="detail-value"><%= account.don_vi_cong_tac || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Số chứng chỉ hành nghề</span><span class="detail-value"><%= account.so_chung_chi_hanh_nghe || '—' %></span></div></div>
+        <div class="col-12"><div class="detail-item"><span class="detail-label">Khu vực được xem</span><span class="detail-value"><%= account.khu_vuc_duoc_xem || '—' %></span></div></div>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <h2>Trạng thái và quyền truy cập</h2>
+      <div class="row g-3">
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Trạng thái hồ sơ</span><span class="detail-value"><%= account.trang_thai || '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Quyền đăng nhập</span><span class="detail-value"><%= account.duoc_dang_nhap ? 'Được đăng nhập' : 'Đã khóa' %></span></div></div>
+        <div class="col-12">
+          <div class="detail-item">
+            <span class="detail-label">Các cổng được cấp</span>
+            <div class="detail-value">
+              <% const assignedRoles = roles.filter((role) => account.cong_vai_tro.includes(role.slug)); %>
+              <% if (assignedRoles.length) { assignedRoles.forEach((role) => { %>
+                <span class="badge text-bg-success me-1"><%= role.title %></span>
+              <% }); } else { %>—<% } %>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Ngày tạo</span><span class="detail-value"><%= account.ngay_tao ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(account.ngay_tao) : '—' %></span></div></div>
+        <div class="col-sm-6"><div class="detail-item"><span class="detail-label">Lần đăng nhập cuối</span><span class="detail-value"><%= account.lan_dang_nhap_cuoi ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(account.lan_dang_nhap_cuoi) : 'Chưa đăng nhập' %></span></div></div>
+      </div>
+      <p class="text-secondary small mt-3 mb-0">Mật khẩu không được hiển thị trên trang chi tiết.</p>
+    </section>
+  </main>
+</body>
+</html>
