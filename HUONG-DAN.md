@@ -42,7 +42,10 @@ environments should provide the same `DB_*` variables directly. Do not commit
 
 The workflow in `.github/workflows/deploy-render.yml` builds the application,
 runs its tests, and is triggered when code is pushed to `main`. Render hosts
-the running web application and deploys changes directly from GitHub.
+the running web application and deploys changes directly from GitHub. This is
+a NestJS server application, so GitHub Pages cannot host it as a static site.
+Open the public `onrender.com` URL shown in your Render Web Service dashboard,
+not the GitHub Pages URL.
 
 1. In Render, create a **Web Service** from this GitHub repository. Select the
    `main` branch, the **Free** plan, and a Node runtime. Set the build command
