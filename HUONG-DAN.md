@@ -38,6 +38,35 @@ PostgreSQL account. The application loads `.env` locally; deployment
 environments should provide the same `DB_*` variables directly. Do not commit
 `.env` or uploaded files.
 
+## Deploy to Render with GitHub Actions
+
+The workflow in `.github/workflows/deploy-render.yml` builds the application,
+runs its tests, and triggers a Render deploy when code is pushed to `main`.
+GitHub Actions runs the checks; Render hosts the running web application.
+
+1. In Render, create a **Web Service** from this GitHub repository. Select the
+   `main` branch, the **Free** plan, and a Node runtime. Set the build command
+   to `npm ci && npm run build` and the start command to `npm run start:prod`.
+   Disable Render's automatic deploys so the GitHub Actions workflow is the
+   only deployment trigger.
+2. In the Render service's environment settings, add `DB_HOST`, `DB_PORT`,
+   `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, and `AUTH_SESSION_SECRET`.
+   Use the connection details for your existing PostgreSQL database and make
+   sure it accepts connections from Render. Generate a long, unique session
+   secret; never put production credentials in Git.
+3. In the Render service settings, create a deploy hook and copy its URL.
+4. In the GitHub repository, open **Settings → Secrets and variables →
+   Actions → New repository secret**. Set the name to
+   `RENDER_DEPLOY_HOOK_URL` and paste the deploy hook URL as its value.
+5. Push a commit to `main`, or run **Build, test, and deploy to Render** from
+   the GitHub **Actions** tab. Render starts a deployment only after the build
+   and tests pass.
+
+Render's Free service uses temporary storage. Files uploaded by the app
+(`uploads/`) can disappear when the service restarts or redeploys. The existing
+local uploads are not copied to Render. Use persistent or external file storage
+if uploaded files must be kept.
+
 ## Export consolidated data
 
 Use the download button on the map page or request `/xuat-file/tong-hop` to
